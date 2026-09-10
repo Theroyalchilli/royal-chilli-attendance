@@ -1,17 +1,5 @@
-// Roles come straight from royal-chilli-pos's `staff.role` CHECK constraint.
-export type StaffRole =
-  | "owner"
-  | "admin"
-  | "manager"
-  | "supervisor"
-  | "cashier"
-  | "waiter"
-  | "chef"
-  | "kitchen"
-  | "driver"
-  | "inventory_manager"
-  | "accountant"
-  | "employee";
+// Matches royal-chilli-pos's `staff.role` (migration 032): 4 roles.
+export type StaffRole = "employee" | "manager" | "hr" | "admin";
 
 export type SessionUser = {
   id: number;

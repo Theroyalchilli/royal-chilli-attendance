@@ -1,9 +1,7 @@
 import type { StaffRole } from "./types";
 
-// Mirrors royal-chilli-pos's `manage_staff` default set — the roles that reach
-// Staff Hub / payroll / rota there are the ones that reach this admin console.
-const ADMIN_ROLES: StaffRole[] = ["owner", "admin", "manager"];
-
+// The attendance admin console (this app) maps to the POS's "attendance" tab:
+// manager, hr and admin. Employees only ever use the kiosk.
 export function canManageAttendance(role: StaffRole): boolean {
-  return ADMIN_ROLES.includes(role);
+  return role === "manager" || role === "hr" || role === "admin";
 }
