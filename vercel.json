@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/cron/missing-clockouts", "schedule": "0 * * * *" },
+    { "path": "/api/cron/purge-photos", "schedule": "30 3 * * *" }
+  ]
+}

@@ -53,8 +53,9 @@ export function getSessionCookieOptions() {
       sameSite: "lax" as const,
       maxAge: 60 * 60 * 12,
       path: "/",
-      // Phase 8: set domain: ".royalchilli.com" here and in royal-chilli-pos
-      // to share the session across the subdomains.
+      // Set COOKIE_DOMAIN=.royalchilli.com in BOTH apps once they're on the
+      // subdomains — then a manager login in either signs them into the other.
+      ...(process.env.COOKIE_DOMAIN ? { domain: process.env.COOKIE_DOMAIN } : {}),
     },
   };
 }
