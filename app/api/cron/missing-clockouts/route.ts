@@ -3,6 +3,7 @@ import supabase from "@/lib/supabase";
 import { assertCron } from "@/lib/cron";
 import { getAttendanceSettings } from "@/lib/settings";
 import { audit } from "@/lib/attendance-write";
+import { notify, notifyManagers } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,12 @@ export async function GET(req: NextRequest) {
     .lt("clock_in", cutoff)
     .neq("approval_status", "pending");
 
+  const ids = [...new Set((stale ?? []).map((r) => r.staff_id))];
+  const { data: names } = ids.length
+    ? await supabase.from("staff").select("id, name").in("id", ids)
+    : { data: [] };
+  const nameById = new Map((names ?? []).map((s) => [s.id, s.name]));
+
   let flagged = 0;
   for (const r of stale ?? []) {
     const note = `[auto ${new Date().toISOString().slice(0, 10)}] still clocked in after ${settings.missingClockoutHours}h — check`;
@@ -38,6 +45,8 @@ export async function GET(req: NextRequest) {
       })
       .eq("id", r.id);
     await audit(null, "auto_missing_clockout", r.id, null, { clock_in: r.clock_in });
+    await notify(r.staff_id, "missed_clockout", "You didn't clock out — a manager needs to fix your hours.", "/me/attendance");
+    await notifyManagers("missed_clockout", `${nameById.get(r.staff_id) ?? "Someone"} didn't clock out.`, "/admin/attendance");
     flagged++;
   }
 

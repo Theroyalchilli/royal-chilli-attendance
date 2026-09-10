@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import supabase from "@/lib/supabase";
 import { createSession, getSessionCookieOptions } from "@/lib/auth";
-import { canManageAttendance } from "@/lib/permissions";
 import type { StaffRole } from "@/lib/types";
 
 // Same credentials as royal-chilli-pos: verifies username + password against the
-// shared `staff` table (same bcrypt hash). Only roles that can manage staff in
-// the POS get a session here — employees use the kiosk, not this login.
+// shared `staff` table (same bcrypt hash). Everyone logs in — employees land on
+// their personal dashboard, managers/hr/admin on the team console.
 export async function POST(req: NextRequest) {
   try {
     const { username, password } = await req.json();
@@ -29,10 +28,6 @@ export async function POST(req: NextRequest) {
     const valid = await bcrypt.compare(password, data.password_hash);
     if (!valid) {
       return NextResponse.json({ error: "Invalid username or password" }, { status: 401 });
-    }
-
-    if (!canManageAttendance(data.role as StaffRole)) {
-      return NextResponse.json({ error: "This login isn't for the attendance console" }, { status: 403 });
     }
 
     const token = await createSession({ id: data.id, name: data.name, role: data.role as StaffRole });

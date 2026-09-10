@@ -180,7 +180,7 @@ export default function Kiosk() {
             <p>Ask a manager for a copy or deletion of your data.</p>
           </div>
           <Link href="/login" className="fixed bottom-3 left-3 text-xs text-neutral-700 hover:text-neutral-400">
-            Manager login
+            Staff login
           </Link>
         </div>
       )}
