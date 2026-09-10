@@ -6,9 +6,11 @@ import { audit } from "@/lib/attendance-write";
 
 export const dynamic = "force-dynamic";
 
-// Hourly: an attendance row still open long past any real shift almost always
-// means someone forgot to clock out. Flag it for a manager (approval_status →
-// pending, note appended) so it surfaces in /admin/attendance and the dashboard.
+// Daily (Hobby plan — one run/day): an attendance row still open long past any
+// real shift almost always means someone forgot to clock out. Flag it for a
+// manager (approval_status → pending, note appended) so it surfaces in
+// /admin/attendance and the dashboard. The live dashboard already shows these
+// in real time; this just makes the flag stick.
 export async function GET(req: NextRequest) {
   const bad = assertCron(req);
   if (bad) return bad;
