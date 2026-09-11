@@ -45,7 +45,7 @@ export default function Shell({
   }
 
   const sidebarBody = (onClose?: () => void) => (
-    <>
+    <div className="flex h-full flex-col overflow-y-auto">
       <div className="flex items-center gap-2.5 px-5 py-5">
         <span className="grid h-9 w-9 place-items-center rounded-lg bg-white/15 text-lg">📋</span>
         <span className="font-semibold tracking-tight">Staff Attendance</span>
@@ -56,7 +56,7 @@ export default function Shell({
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3">
+      <nav className="px-3">
         {nav.map((n) => (
           <Link
             key={n.href}
@@ -71,7 +71,7 @@ export default function Shell({
         ))}
       </nav>
 
-      <div className="border-t border-white/10 px-3 py-3">
+      <div className="mt-3 border-t border-white/10 px-3 py-3">
         <div className="px-3 pb-2">
           <p className="text-sm font-medium">{user.name}</p>
           <p className="text-xs text-white/50">{ROLE_LABEL[user.role] ?? user.role}</p>
@@ -95,13 +95,15 @@ export default function Shell({
           Sign out
         </button>
       </div>
-    </>
+    </div>
   );
 
   return (
     <div className="min-h-dvh bg-neutral-50 md:flex">
-      {/* Desktop sidebar — always visible */}
-      <aside className="hidden w-60 shrink-0 flex-col bg-brand-dark text-white md:flex">{sidebarBody()}</aside>
+      {/* Desktop sidebar — sticky, own scroll if the nav ever overflows */}
+      <aside className="hidden w-60 shrink-0 self-start bg-brand-dark text-white md:sticky md:top-0 md:block md:h-dvh">
+        {sidebarBody()}
+      </aside>
 
       {/* Mobile drawer + backdrop */}
       {drawerOpen && (
