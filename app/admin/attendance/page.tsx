@@ -90,6 +90,7 @@ export default function AttendancePage() {
   function step(n: number) {
     setAnchor((a) => (range === "day" ? addDays(a, n) : range === "week" ? addDays(a, n * 7) : addMonths(a, n)));
   }
+  const rangeNoun = range === "day" ? "Day" : range === "week" ? "Week" : "Month";
 
   const grouped = useMemo(() => {
     const m = new Map<string, Row[]>();
@@ -109,24 +110,23 @@ export default function AttendancePage() {
         </button>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-        <div className="flex rounded-lg border border-neutral-300 bg-white p-0.5">
-          {(["day", "week", "month"] as const).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              className={`rounded-md px-3 py-1 capitalize ${range === r ? "bg-brand text-white" : "text-neutral-600"}`}
-            >
-              {r}
-            </button>
-          ))}
+      {/* Row 1 — mode + what's currently shown, staff filter opposite */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm">
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg border border-neutral-300 bg-white p-0.5">
+            {(["day", "week", "month"] as const).map((r) => (
+              <button
+                key={r}
+                onClick={() => setRange(r)}
+                className={`rounded-md px-3 py-1 capitalize ${range === r ? "bg-brand text-white" : "text-neutral-600"}`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <span className="font-medium">{rangeLabel(range, from, to)}</span>
         </div>
-        <button onClick={() => step(-1)} className="rounded-lg border border-neutral-300 px-2 py-1.5">←</button>
-        <span className="min-w-[9rem] text-center font-medium">{rangeLabel(range, from, to)}</span>
-        <button onClick={() => step(1)} className="rounded-lg border border-neutral-300 px-2 py-1.5">→</button>
-        <input type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} className="rounded-lg border border-neutral-300 px-2 py-1.5" />
-        <button onClick={() => setAnchor(todayISO())} className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs">Today</button>
-        <label className="ml-auto flex flex-col gap-1">
+        <label className="flex items-center gap-2">
           <span className="text-xs text-neutral-500">Staff</span>
           <select value={staffId} onChange={(e) => setStaffId(e.target.value)} className="rounded-lg border border-neutral-300 px-2 py-1.5">
             <option value="">Everyone</option>
@@ -135,6 +135,22 @@ export default function AttendancePage() {
             ))}
           </select>
         </label>
+      </div>
+
+      {/* Row 2 — previous/next, worded for the current mode */}
+      <div className="mt-2 flex items-center justify-between text-sm">
+        <button onClick={() => step(-1)} className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 font-medium hover:bg-neutral-50">
+          ← Previous {rangeNoun}
+        </button>
+        <button onClick={() => step(1)} className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 font-medium hover:bg-neutral-50">
+          Next {rangeNoun} →
+        </button>
+      </div>
+
+      {/* Row 3 — jump to any date */}
+      <div className="mt-2 flex items-center gap-2 text-sm">
+        <input type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5" />
+        <button onClick={() => setAnchor(todayISO())} className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs">Today</button>
       </div>
 
       {loading ? (
