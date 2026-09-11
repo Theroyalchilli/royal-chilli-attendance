@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/supabase";
 import { requireManager } from "@/lib/guard";
 import { audit } from "@/lib/attendance-write";
+import { getAttendanceSettings, localDateString } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,12 @@ export async function POST(req: NextRequest) {
   const end = String(b.end_time || "");
   if (!staffId || !date || !start || !end) {
     return NextResponse.json({ error: "staff, date, start and end are required" }, { status: 400 });
+  }
+
+  const settings = await getAttendanceSettings();
+  const today = localDateString(new Date(), settings.timezone);
+  if (date < today) {
+    return NextResponse.json({ error: "Can't schedule a shift for a date that's already passed" }, { status: 400 });
   }
 
   const { data: existing } = await supabase

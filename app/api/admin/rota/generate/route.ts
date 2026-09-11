@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/supabase";
 import { requireManager } from "@/lib/guard";
-import { localIsoWeekday, getAttendanceSettings } from "@/lib/settings";
+import { localIsoWeekday, getAttendanceSettings, localDateString } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +23,10 @@ export async function POST(req: NextRequest) {
   if (!weekStart) return NextResponse.json({ error: "week_start required" }, { status: 400 });
   const days = weekDays(weekStart);
   const settings = await getAttendanceSettings();
+  const today = localDateString(new Date(), settings.timezone);
+  if (days[6] < today) {
+    return NextResponse.json({ error: "That week is in the past — Rota is read-only there" }, { status: 400 });
+  }
 
   const { data: staff } = await supabase
     .from("staff")

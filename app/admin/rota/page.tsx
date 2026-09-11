@@ -19,6 +19,10 @@ function shiftWeek(iso: string, weeks: number) {
 const hhmm = (t: string) => t.slice(0, 5);
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+// Rota is forward scheduling. Once a day is over, what actually happened
+// lives in Attendance — the shift grid becomes read-only history instead.
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
 export default function RotaPage() {
   const [weekStart, setWeekStart] = useState(mondayOf());
   const [days, setDays] = useState<string[]>([]);
@@ -54,7 +58,12 @@ export default function RotaPage() {
     [leave],
   );
 
+  const today = todayIso();
+  // Read-only once the whole week is behind us; today stays editable.
+  const weekIsPast = days.length > 0 && days[6] < today;
+
   async function generate(mode: "defaults" | "copy_previous") {
+    if (weekIsPast) return;
     setBusy(true);
     const res = await fetch("/api/admin/rota/generate", {
       method: "POST",
@@ -90,12 +99,18 @@ export default function RotaPage() {
         </span>
         <button onClick={() => setWeekStart(shiftWeek(weekStart, 1))} className="rounded-lg border border-neutral-300 px-2 py-1.5">→</button>
         <button onClick={() => setWeekStart(mondayOf())} className="rounded-lg border border-neutral-300 px-2 py-1.5 text-xs">This week</button>
-        <div className="ml-auto flex gap-2">
-          <button onClick={() => generate("copy_previous")} disabled={busy} className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs disabled:opacity-50">Copy last week</button>
-          <button onClick={() => generate("defaults")} disabled={busy} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-50">Fill from defaults</button>
-        </div>
+        {!weekIsPast && (
+          <div className="ml-auto flex gap-2">
+            <button onClick={() => generate("copy_previous")} disabled={busy} className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs disabled:opacity-50">Copy last week</button>
+            <button onClick={() => generate("defaults")} disabled={busy} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-50">Fill from defaults</button>
+          </div>
+        )}
       </div>
-      <p className="mt-1 text-xs text-neutral-400">Click a cell to set or clear a shift. Neither button overwrites shifts you&apos;ve already set.</p>
+      <p className="mt-1 text-xs text-neutral-400">
+        {weekIsPast
+          ? "This week is in the past — read-only history. Fix what actually happened in Attendance instead."
+          : "Click a cell to set or clear a shift. Neither button overwrites shifts you've already set."}
+      </p>
 
       {loading ? (
         <p className="mt-8 text-sm text-neutral-400">Loading…</p>
@@ -121,20 +136,21 @@ export default function RotaPage() {
                   {days.map((date) => {
                     const sh = shiftAt.get(`${s.id}:${date}`) ?? null;
                     const lv = onLeave(s.id, date);
+                    const isPast = date < today;
+                    const label = lv ? "Leave" : sh ? `${hhmm(sh.start_time)}–${hhmm(sh.end_time)}` : "off";
+                    const tone = lv ? "bg-purple-100 text-purple-700" : sh ? "bg-emerald-100 text-emerald-800" : "text-neutral-300";
                     return (
                       <td key={date} className="p-1 text-center">
-                        <button
-                          onClick={() => setCell({ staff: s, date, shift: sh })}
-                          className={`w-full rounded-md px-1 py-2 text-xs transition ${
-                            lv
-                              ? "bg-purple-100 text-purple-700"
-                              : sh
-                                ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                                : "text-neutral-300 hover:bg-neutral-100"
-                          }`}
-                        >
-                          {lv ? "Leave" : sh ? `${hhmm(sh.start_time)}–${hhmm(sh.end_time)}` : "off"}
-                        </button>
+                        {isPast ? (
+                          <div className={`w-full cursor-default rounded-md px-1 py-2 text-xs opacity-60 ${tone}`}>{label}</div>
+                        ) : (
+                          <button
+                            onClick={() => setCell({ staff: s, date, shift: sh })}
+                            className={`w-full rounded-md px-1 py-2 text-xs transition ${tone} ${sh ? "hover:bg-emerald-200" : lv ? "" : "hover:bg-neutral-100"}`}
+                          >
+                            {label}
+                          </button>
+                        )}
                       </td>
                     );
                   })}
