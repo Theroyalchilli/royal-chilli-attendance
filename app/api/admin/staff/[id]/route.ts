@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import supabase from "@/lib/supabase";
 import { getSessionFromRequest } from "@/lib/auth";
 import { canManageAttendance } from "@/lib/permissions";
@@ -13,18 +12,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const staffId = Number((await params).id);
   const body = await req.json();
   const patch: Record<string, unknown> = {};
-
-  if (typeof body.pin === "string" && body.pin !== "") {
-    if (!/^\d{4}$/.test(body.pin)) {
-      return NextResponse.json({ error: "PIN must be 4 digits" }, { status: 400 });
-    }
-    patch.pin_hash = await bcrypt.hash(body.pin, 10);
-    patch.pin_fail_count = 0;
-    patch.pin_locked_until = null;
-  }
-  if (body.clear_pin === true) {
-    patch.pin_hash = null;
-  }
 
   for (const [key, coerce] of [
     ["rota_start", (v: unknown) => (v ? String(v) : null)],
@@ -47,9 +34,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { error } = await supabase.from("staff").update(patch).eq("id", staffId);
   if (error) return NextResponse.json({ error: "Update failed" }, { status: 500 });
 
-  await audit(session.id, "staff_attendance_update", staffId, null, {
-    ...patch,
-    pin_hash: patch.pin_hash ? "set" : patch.pin_hash === null ? "cleared" : undefined,
-  });
+  await audit(session.id, "staff_attendance_update", staffId, null, patch);
   return NextResponse.json({ success: true });
 }

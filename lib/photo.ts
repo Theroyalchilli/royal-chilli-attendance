@@ -3,10 +3,10 @@ import supabase from "./supabase";
 const BUCKET = "attendance-photos";
 
 /**
- * Store a kiosk clock photo. `dataUrl` is a "data:image/jpeg;base64,…" string
- * from the tablet's canvas. Returns the object path, or null if there was no
- * photo or the upload failed (the caller then flags photo_missing — a punch is
- * never blocked by a camera problem).
+ * Store a clock-in/out photo. `dataUrl` is a "data:image/jpeg;base64,…" string
+ * captured from the phone's camera. Returns the object path, or null if there
+ * was no photo or the upload failed (the caller then flags photo_missing — a
+ * punch is never blocked by a camera problem).
  */
 export async function storeClockPhoto(
   dataUrl: string | null | undefined,

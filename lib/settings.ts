@@ -10,8 +10,6 @@ const KEYS = [
   "attendance_rounding_minutes",
   "attendance_default_grace_minutes",
   "attendance_photo_retention_days",
-  "attendance_kiosk_pin_max_attempts",
-  "attendance_kiosk_pin_lockout_minutes",
   "attendance_missing_clockout_hours",
   "geofence_enabled",
   "restaurant_latitude",
@@ -27,8 +25,6 @@ export type AttendanceSettings = {
   roundingMinutes: number;
   defaultGraceMinutes: number;
   photoRetentionDays: number;
-  kioskPinMaxAttempts: number;
-  kioskPinLockoutMinutes: number;
   missingClockoutHours: number;
   geofenceEnabled: boolean;
   restaurantLat: number | null;
@@ -44,8 +40,6 @@ const DEFAULTS: AttendanceSettings = {
   roundingMinutes: 0,
   defaultGraceMinutes: 5,
   photoRetentionDays: 60,
-  kioskPinMaxAttempts: 5,
-  kioskPinLockoutMinutes: 5,
   missingClockoutHours: 16,
   geofenceEnabled: false,
   restaurantLat: null,
@@ -79,8 +73,6 @@ export async function getAttendanceSettings(): Promise<AttendanceSettings> {
     roundingMinutes: num("attendance_rounding_minutes", DEFAULTS.roundingMinutes),
     defaultGraceMinutes: num("attendance_default_grace_minutes", DEFAULTS.defaultGraceMinutes),
     photoRetentionDays: num("attendance_photo_retention_days", DEFAULTS.photoRetentionDays),
-    kioskPinMaxAttempts: num("attendance_kiosk_pin_max_attempts", DEFAULTS.kioskPinMaxAttempts),
-    kioskPinLockoutMinutes: num("attendance_kiosk_pin_lockout_minutes", DEFAULTS.kioskPinLockoutMinutes),
     missingClockoutHours: num("attendance_missing_clockout_hours", DEFAULTS.missingClockoutHours),
     geofenceEnabled: bool("geofence_enabled", DEFAULTS.geofenceEnabled),
     restaurantLat: m.has("restaurant_latitude") && m.get("restaurant_latitude") != null ? Number(m.get("restaurant_latitude")) : null,

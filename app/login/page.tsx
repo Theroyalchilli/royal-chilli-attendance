@@ -76,9 +76,6 @@ export default function LoginPage() {
         >
           {busy ? "Signing in…" : "Sign in"}
         </button>
-        <p className="mt-4 text-center text-xs text-neutral-400">
-          Clocking in or out? Use the reception tablet.
-        </p>
       </form>
     </main>
   );

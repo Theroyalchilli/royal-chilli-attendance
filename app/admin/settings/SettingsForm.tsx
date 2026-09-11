@@ -72,8 +72,7 @@ export default function SettingsForm() {
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="h-5 w-5" />
         </label>
         <p className="text-xs text-neutral-400">
-          When on, a phone clock-in / clock-out is rejected unless the person is within the radius below.
-          The kiosk tablet is never geofenced.
+          When on, a clock-in / clock-out is rejected unless the person is within the radius below.
         </p>
 
         <button
