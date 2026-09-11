@@ -93,7 +93,7 @@ export default function Shell({
   );
 
   return (
-    <div className="min-h-dvh bg-neutral-50 md:flex">
+    <div className="min-h-dvh bg-cream md:flex">
       {/* Desktop sidebar — sticky */}
       <aside className="hidden w-60 shrink-0 self-start bg-brand-dark text-white md:sticky md:top-0 md:block md:h-dvh">
         {sidebarBody()}

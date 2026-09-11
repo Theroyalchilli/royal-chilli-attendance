@@ -44,7 +44,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-neutral-50 px-6">
+    <main className="grid min-h-dvh place-items-center bg-cream px-6">
       <form onSubmit={submit} className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-2.5">
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand/10 text-lg">📋</span>
