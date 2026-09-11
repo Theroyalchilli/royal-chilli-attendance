@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { hm, dayLabel, clockTime } from "@/lib/format";
-import { POS_HR_URL } from "@/lib/pos";
 
 type Staff = {
   id: number;
@@ -173,14 +172,9 @@ export default function EmployeeProfilePage() {
                 : "No default rota set"}
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <a href={POS_HR_URL} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-brand hover:underline">
-              Open full HR record →
-            </a>
-            <button onClick={() => setEditingRota(true)} className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold hover:bg-neutral-50">
-              Edit rota
-            </button>
-          </div>
+          <button onClick={() => setEditingRota(true)} className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold hover:bg-neutral-50">
+            Edit rota
+          </button>
         </div>
       </div>
 
