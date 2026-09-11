@@ -11,6 +11,7 @@ type Staff = {
   employee_number: string | null;
   employment_type: string | null;
   pay_rate: number | null;
+  active: number;
   rota_start: string | null;
   rota_end: string | null;
   rota_working_days: number[] | null;
@@ -157,7 +158,12 @@ export default function EmployeeProfilePage() {
     <div className="mx-auto max-w-4xl">
       {/* Header */}
       <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-        <h1 className="text-lg font-semibold">{staff.name}</h1>
+        <h1 className="text-lg font-semibold">
+          {staff.name}
+          {!staff.active && (
+            <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 align-middle text-[11px] font-semibold text-neutral-500">Inactive</span>
+          )}
+        </h1>
         <p className="mt-0.5 text-sm text-neutral-500">
           {ROLE_LABEL[staff.role] ?? staff.role}
           {staff.employee_number && ` · ${staff.employee_number}`}
