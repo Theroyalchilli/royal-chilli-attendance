@@ -107,7 +107,6 @@ export default function EmployeeProfilePage() {
   const [loading, setLoading] = useState(true);
   const [editingRow, setEditingRow] = useState<Row | null>(null);
   const [adding, setAdding] = useState(false);
-  const [editingRota, setEditingRota] = useState(false);
   const [corrBusy, setCorrBusy] = useState<number | null>(null);
   const [tsBusy, setTsBusy] = useState(false);
 
@@ -158,24 +157,17 @@ export default function EmployeeProfilePage() {
     <div className="mx-auto max-w-4xl">
       {/* Header */}
       <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-semibold">{staff.name}</h1>
-            <p className="mt-0.5 text-sm text-neutral-500">
-              {ROLE_LABEL[staff.role] ?? staff.role}
-              {staff.employee_number && ` · ${staff.employee_number}`}
-              {staff.pay_rate != null && ` · £${staff.pay_rate}/hr`}
-            </p>
-            <p className="mt-1 text-xs text-neutral-400">
-              {staff.rota_start && staff.rota_end
-                ? `Rota: ${staff.rota_start.slice(0, 5)}–${staff.rota_end.slice(0, 5)} · ${(staff.rota_working_days ?? []).map((i) => DAYS[i - 1]).join(" ")}`
-                : "No default rota set"}
-            </p>
-          </div>
-          <button onClick={() => setEditingRota(true)} className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold hover:bg-neutral-50">
-            Edit rota
-          </button>
-        </div>
+        <h1 className="text-lg font-semibold">{staff.name}</h1>
+        <p className="mt-0.5 text-sm text-neutral-500">
+          {ROLE_LABEL[staff.role] ?? staff.role}
+          {staff.employee_number && ` · ${staff.employee_number}`}
+          {staff.pay_rate != null && ` · £${staff.pay_rate}/hr`}
+        </p>
+        <p className="mt-1 text-xs text-neutral-400">
+          {staff.rota_start && staff.rota_end
+            ? `Rota: ${staff.rota_start.slice(0, 5)}–${staff.rota_end.slice(0, 5)} · ${(staff.rota_working_days ?? []).map((i) => DAYS[i - 1]).join(" ")}`
+            : "No default rota set"}
+        </p>
       </div>
 
       {/* Filter bar */}
@@ -357,7 +349,6 @@ export default function EmployeeProfilePage() {
 
       {editingRow && <AttendanceEditModal row={editingRow} onClose={() => setEditingRow(null)} onSaved={() => { setEditingRow(null); load(); }} />}
       {adding && <ManualEntryModal staffId={Number(staffId)} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />}
-      {editingRota && <RotaModal staff={staff} onClose={() => setEditingRota(false)} onSaved={() => { setEditingRota(false); load(); }} />}
     </div>
   );
 }
@@ -523,90 +514,3 @@ function ManualEntryModal({ staffId, onClose, onSaved }: { staffId: number; onCl
   );
 }
 
-function RotaModal({ staff, onClose, onSaved }: { staff: Staff; onClose: () => void; onSaved: () => void }) {
-  const [start, setStart] = useState(staff.rota_start?.slice(0, 5) ?? "");
-  const [end, setEnd] = useState(staff.rota_end?.slice(0, 5) ?? "");
-  const [days, setDays] = useState<number[]>(staff.rota_working_days ?? [1, 2, 3, 4, 5]);
-  const [breakMin, setBreakMin] = useState(String(staff.rota_break_minutes ?? 0));
-  const [graceMin, setGraceMin] = useState(staff.rota_grace_minutes == null ? "" : String(staff.rota_grace_minutes));
-  const [err, setErr] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function save() {
-    setBusy(true);
-    setErr("");
-    const res = await fetch(`/api/admin/staff/${staff.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        rota_start: start || null,
-        rota_end: end || null,
-        rota_working_days: days,
-        rota_break_minutes: Number(breakMin) || 0,
-        rota_grace_minutes: graceMin === "" ? null : Number(graceMin),
-      }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setErr((await res.json()).error || "Save failed");
-      return;
-    }
-    onSaved();
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-5">
-        <h2 className="font-semibold">{staff.name} — rota</h2>
-
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-neutral-500">Rota start</label>
-            <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs text-neutral-500">Rota end</label>
-            <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-          </div>
-        </div>
-
-        <label className="mt-4 block text-xs text-neutral-500">Working days</label>
-        <div className="mt-1 flex flex-wrap gap-1.5">
-          {DAYS.map((label, i) => {
-            const iso = i + 1;
-            const on = days.includes(iso);
-            return (
-              <button
-                key={label}
-                onClick={() => setDays((cur) => (on ? cur.filter((x) => x !== iso) : [...cur, iso].sort()))}
-                className={`rounded-lg border px-2.5 py-1 text-xs ${on ? "border-brand bg-brand/10 text-brand" : "border-neutral-300 text-neutral-500"}`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-neutral-500">Unpaid break (min)</label>
-            <input type="number" min={0} value={breakMin} onChange={(e) => setBreakMin(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs text-neutral-500">Grace (min, blank = default)</label>
-            <input type="number" min={0} value={graceMin} onChange={(e) => setGraceMin(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-          </div>
-        </div>
-
-        {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
-
-        <div className="mt-5 flex gap-3">
-          <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
-          <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
-            {busy ? "Saving…" : "Save"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
