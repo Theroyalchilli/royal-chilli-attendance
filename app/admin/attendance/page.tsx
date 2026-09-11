@@ -24,27 +24,54 @@ type Row = {
 };
 type Staff = { id: number; name: string };
 
-function isoWeekStart(d = new Date()) {
-  const x = new Date(d);
-  const day = (x.getDay() + 6) % 7; // Mon=0
-  x.setDate(x.getDate() - day);
-  return x.toISOString().slice(0, 10);
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
 }
 function addDays(iso: string, n: number) {
-  const d = new Date(iso + "T12:00:00Z");
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
+  const x = new Date(iso + "T12:00:00Z");
+  x.setUTCDate(x.getUTCDate() + n);
+  return x.toISOString().slice(0, 10);
+}
+function addMonths(iso: string, n: number) {
+  const [y, m, day] = iso.split("-").map(Number);
+  const x = new Date(Date.UTC(y, m - 1 + n, 1));
+  const lastDay = new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 0)).getUTCDate();
+  x.setUTCDate(Math.min(day, lastDay));
+  return x.toISOString().slice(0, 10);
+}
+/** [from, to] (inclusive) for "day" | "week" (Mon–Sun) | "month" around `anchor`. */
+function rangeFor(range: "day" | "week" | "month", anchor: string): { from: string; to: string } {
+  if (range === "week") {
+    const weekday = new Date(anchor + "T12:00:00Z").getUTCDay(); // 0=Sun..6=Sat
+    const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
+    const from = addDays(anchor, mondayOffset);
+    return { from, to: addDays(from, 6) };
+  }
+  if (range === "month") {
+    const [y, m] = anchor.split("-").map(Number);
+    const from = `${y}-${String(m).padStart(2, "0")}-01`;
+    const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    return { from, to: `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}` };
+  }
+  return { from: anchor, to: anchor }; // day
+}
+function rangeLabel(range: string, from: string, to: string) {
+  if (range === "day") return dayLabel(from);
+  if (range === "month") return new Date(from + "T12:00:00Z").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+  return `${dayLabel(from)} – ${dayLabel(to)}`;
 }
 
 export default function AttendancePage() {
-  const [from, setFrom] = useState(isoWeekStart());
-  const [to, setTo] = useState(addDays(isoWeekStart(), 6));
+  const [range, setRange] = useState<"day" | "week" | "month">("day");
+  const [anchor, setAnchor] = useState(todayISO());
   const [staffId, setStaffId] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Row | null>(null);
   const [adding, setAdding] = useState(false);
+
+  const { from, to } = rangeFor(range, anchor);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -59,6 +86,10 @@ export default function AttendancePage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  function step(n: number) {
+    setAnchor((a) => (range === "day" ? addDays(a, n) : range === "week" ? addDays(a, n * 7) : addMonths(a, n)));
+  }
 
   const grouped = useMemo(() => {
     const m = new Map<string, Row[]>();
@@ -78,16 +109,24 @@ export default function AttendancePage() {
         </button>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-end gap-2 text-sm">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-neutral-500">From</span>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-neutral-300 px-2 py-1.5" />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-neutral-500">To</span>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-neutral-300 px-2 py-1.5" />
-        </label>
-        <label className="flex flex-col gap-1">
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+        <div className="flex rounded-lg border border-neutral-300 bg-white p-0.5">
+          {(["day", "week", "month"] as const).map((r) => (
+            <button
+              key={r}
+              onClick={() => setRange(r)}
+              className={`rounded-md px-3 py-1 capitalize ${range === r ? "bg-brand text-white" : "text-neutral-600"}`}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => step(-1)} className="rounded-lg border border-neutral-300 px-2 py-1.5">←</button>
+        <span className="min-w-[9rem] text-center font-medium">{rangeLabel(range, from, to)}</span>
+        <button onClick={() => step(1)} className="rounded-lg border border-neutral-300 px-2 py-1.5">→</button>
+        <input type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} className="rounded-lg border border-neutral-300 px-2 py-1.5" />
+        <button onClick={() => setAnchor(todayISO())} className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs">Today</button>
+        <label className="ml-auto flex flex-col gap-1">
           <span className="text-xs text-neutral-500">Staff</span>
           <select value={staffId} onChange={(e) => setStaffId(e.target.value)} className="rounded-lg border border-neutral-300 px-2 py-1.5">
             <option value="">Everyone</option>
@@ -96,9 +135,6 @@ export default function AttendancePage() {
             ))}
           </select>
         </label>
-        <button onClick={() => { setFrom(isoWeekStart()); setTo(addDays(isoWeekStart(), 6)); }} className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs">
-          This week
-        </button>
       </div>
 
       {loading ? (
