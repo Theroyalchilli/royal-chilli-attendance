@@ -13,6 +13,10 @@ const KEYS = [
   "attendance_kiosk_pin_max_attempts",
   "attendance_kiosk_pin_lockout_minutes",
   "attendance_missing_clockout_hours",
+  "geofence_enabled",
+  "restaurant_latitude",
+  "restaurant_longitude",
+  "geofence_radius_meters",
 ] as const;
 
 export type AttendanceSettings = {
@@ -26,6 +30,10 @@ export type AttendanceSettings = {
   kioskPinMaxAttempts: number;
   kioskPinLockoutMinutes: number;
   missingClockoutHours: number;
+  geofenceEnabled: boolean;
+  restaurantLat: number | null;
+  restaurantLng: number | null;
+  geofenceRadiusMeters: number;
 };
 
 const DEFAULTS: AttendanceSettings = {
@@ -39,6 +47,10 @@ const DEFAULTS: AttendanceSettings = {
   kioskPinMaxAttempts: 5,
   kioskPinLockoutMinutes: 5,
   missingClockoutHours: 16,
+  geofenceEnabled: false,
+  restaurantLat: null,
+  restaurantLng: null,
+  geofenceRadiusMeters: 150,
 };
 
 let cache: { at: number; value: AttendanceSettings } | null = null;
@@ -70,9 +82,17 @@ export async function getAttendanceSettings(): Promise<AttendanceSettings> {
     kioskPinMaxAttempts: num("attendance_kiosk_pin_max_attempts", DEFAULTS.kioskPinMaxAttempts),
     kioskPinLockoutMinutes: num("attendance_kiosk_pin_lockout_minutes", DEFAULTS.kioskPinLockoutMinutes),
     missingClockoutHours: num("attendance_missing_clockout_hours", DEFAULTS.missingClockoutHours),
+    geofenceEnabled: bool("geofence_enabled", DEFAULTS.geofenceEnabled),
+    restaurantLat: m.has("restaurant_latitude") && m.get("restaurant_latitude") != null ? Number(m.get("restaurant_latitude")) : null,
+    restaurantLng: m.has("restaurant_longitude") && m.get("restaurant_longitude") != null ? Number(m.get("restaurant_longitude")) : null,
+    geofenceRadiusMeters: num("geofence_radius_meters", DEFAULTS.geofenceRadiusMeters),
   };
   cache = { at: Date.now(), value };
   return value;
+}
+
+export function clearSettingsCache() {
+  cache = null;
 }
 
 /** "YYYY-MM-DD" for an instant in the given IANA timezone. */

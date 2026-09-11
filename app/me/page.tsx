@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { clockTime, hm } from "@/lib/format";
+import { hm } from "@/lib/format";
+import ClockButton from "@/components/me/ClockButton";
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -90,7 +91,11 @@ export default function MeDashboard() {
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="text-2xl font-bold">Hi {name}</h1>
-      <p className="mt-1 text-sm text-neutral-500">Clock in and out at the reception tablet. Everything else is here.</p>
+      <p className="mt-1 text-sm text-neutral-500">Clock in and out below, or at the reception tablet.</p>
+
+      <div className="mt-5">
+        <ClockButton />
+      </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         {(cards ?? Array.from({ length: 4 }, () => null)).map((c, i) => (
