@@ -94,8 +94,8 @@ export default function Shell({
 
   return (
     <div className="min-h-dvh bg-cream md:flex">
-      {/* Desktop sidebar — sticky */}
-      <aside className="hidden w-60 shrink-0 self-start bg-brand-dark text-white md:sticky md:top-0 md:block md:h-dvh">
+      {/* Desktop sidebar — sticky; never printed */}
+      <aside className="hidden w-60 shrink-0 self-start bg-brand-dark text-white md:sticky md:top-0 md:block md:h-dvh print:hidden">
         {sidebarBody()}
       </aside>
 
@@ -111,7 +111,7 @@ export default function Shell({
 
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-3">
+        <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-3 print:hidden">
           <button
             className="grid h-9 w-9 place-items-center text-lg text-neutral-500 md:hidden"
             onClick={() => setDrawerOpen(true)}

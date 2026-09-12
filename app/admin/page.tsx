@@ -83,14 +83,14 @@ export default function AdminDashboard() {
           ) : (
             <div className="space-y-2">
               {d.todaysShifts.map((s, i) => (
-                <div key={i} className="flex items-center justify-between text-sm">
-                  <div>
-                    <span className="font-medium">{s.staff_name}</span>
+                <div key={i} className="flex items-center justify-between gap-2 flex-wrap text-sm">
+                  <div className="min-w-0">
+                    <span className="font-medium truncate">{s.staff_name}</span>
                     {s.role && <span className="ml-2 text-xs capitalize text-neutral-400">{s.role}</span>}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-neutral-500">{s.start} – {s.end}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SHIFT_STATUS_BADGE[s.status] ?? "bg-neutral-100"}`}>{SHIFT_STATUS_LABEL[s.status] ?? s.status}</span>
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    <span className="text-neutral-500 whitespace-nowrap">{s.start} – {s.end}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${SHIFT_STATUS_BADGE[s.status] ?? "bg-neutral-100"}`}>{SHIFT_STATUS_LABEL[s.status] ?? s.status}</span>
                   </div>
                 </div>
               ))}
@@ -141,20 +141,22 @@ export default function AdminDashboard() {
           {d.corrections.length === 0 ? (
             <p className="text-sm text-neutral-400">Nothing pending.</p>
           ) : (
-            <table className="w-full text-sm">
-              <tbody>
-                {d.corrections.map((c) => (
-                  <tr key={c.id} className="border-b border-neutral-50 last:border-0">
-                    <td className="py-1.5 font-medium">{c.staff_name}</td>
-                    <td className="py-1.5 text-neutral-500">{c.date && new Date(c.date + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</td>
-                    <td className="py-1.5 text-neutral-500">{c.issue}</td>
-                    <td className="py-1.5 text-right">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${CORR_BADGE[c.status] ?? "bg-neutral-100"}`}>{c.status}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[360px] text-sm">
+                <tbody>
+                  {d.corrections.map((c) => (
+                    <tr key={c.id} className="border-b border-neutral-50 last:border-0">
+                      <td className="py-1.5 font-medium max-w-[110px] truncate">{c.staff_name}</td>
+                      <td className="py-1.5 text-neutral-500 whitespace-nowrap">{c.date && new Date(c.date + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</td>
+                      <td className="py-1.5 text-neutral-500 whitespace-nowrap">{c.issue}</td>
+                      <td className="py-1.5 text-right">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${CORR_BADGE[c.status] ?? "bg-neutral-100"}`}>{c.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Card>
 
@@ -164,17 +166,19 @@ export default function AdminDashboard() {
             <p className="text-sm text-neutral-400">No hours yet this week.</p>
           ) : (
             <>
-              <table className="w-full text-sm">
-                <tbody>
-                  {d.timesheetPreview.map((t, i) => (
-                    <tr key={i} className="border-b border-neutral-50 last:border-0">
-                      <td className="py-1.5 font-medium">{t.staff_name}</td>
-                      <td className="py-1.5 text-right text-neutral-500">{hm(t.net_seconds)}</td>
-                      <td className="py-1.5 text-right text-xs text-amber-600">{t.overtime_seconds ? `+${hm(t.overtime_seconds)}` : ""}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[280px] text-sm">
+                  <tbody>
+                    {d.timesheetPreview.map((t, i) => (
+                      <tr key={i} className="border-b border-neutral-50 last:border-0">
+                        <td className="py-1.5 font-medium max-w-[140px] truncate">{t.staff_name}</td>
+                        <td className="py-1.5 text-right text-neutral-500 whitespace-nowrap">{hm(t.net_seconds)}</td>
+                        <td className="py-1.5 text-right text-xs text-amber-600 whitespace-nowrap">{t.overtime_seconds ? `+${hm(t.overtime_seconds)}` : ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               <div className="mt-2 flex justify-between rounded-lg bg-neutral-50 px-3 py-2 text-sm">
                 <span className="text-neutral-500">Total this week</span>
                 <span className="font-semibold">{hm(d.weekTotalSeconds)}</span>
