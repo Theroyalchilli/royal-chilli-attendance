@@ -75,8 +75,21 @@ export default function AttendancePage() {
   const [editing, setEditing] = useState<Row | null>(null);
   const [adding, setAdding] = useState(false);
   const [quickClockIn, setQuickClockIn] = useState<Pending | null>(null);
+  const [openTargetId, setOpenTargetId] = useState<number | null>(null);
 
   const { from, to } = rangeFor(range, anchor);
+
+  // Arriving from a notification link (?staff_id=&date=&open=) — jump straight
+  // to that person's day and queue their record to auto-open once it loads.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const qsStaffId = params.get("staff_id");
+    const qsDate = params.get("date");
+    const qsOpen = params.get("open");
+    if (qsStaffId) setStaffId(qsStaffId);
+    if (qsDate) { setRange("day"); setAnchor(qsDate); }
+    if (qsOpen) setOpenTargetId(Number(qsOpen));
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -92,6 +105,17 @@ export default function AttendancePage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Once the targeted row has actually loaded, open it — clearing the target
+  // so navigating away and back (or a later manual load) doesn't reopen it.
+  useEffect(() => {
+    if (openTargetId == null) return;
+    const match = rows.find((r) => r.id === openTargetId);
+    if (match) {
+      setEditing(match);
+      setOpenTargetId(null);
+    }
+  }, [openTargetId, rows]);
 
   function step(n: number) {
     setAnchor((a) => (range === "day" ? addDays(a, n) : range === "week" ? addDays(a, n * 7) : addMonths(a, n)));
