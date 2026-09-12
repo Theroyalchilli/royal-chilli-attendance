@@ -137,7 +137,9 @@ function RequestModal({ recent, onClose, onDone }: { recent: Recent[]; onClose: 
           <option value="">Pick a day…</option>
           {recent.map((r) => (
             <option key={r.id} value={r.id}>
-              {dayLabel(r.work_date)} — in {clockTime(r.clock_in)}, out {r.clock_out ? clockTime(r.clock_out) : "—"}
+              {r.id === -1
+                ? `${dayLabel(r.work_date)} — not clocked in yet`
+                : `${dayLabel(r.work_date)} — in ${clockTime(r.clock_in)}, out ${r.clock_out ? clockTime(r.clock_out) : "—"}`}
             </option>
           ))}
         </select>
