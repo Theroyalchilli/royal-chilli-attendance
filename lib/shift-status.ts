@@ -3,13 +3,17 @@
 // Reports "Today" tab, so the same person's status always reads the same
 // way everywhere instead of three slightly different labels.
 
-export type ShiftStatus = "On Shift" | "Done" | "Upcoming" | "Not in" | "Absent";
+export type ShiftStatus = "On Shift" | "Done" | "Upcoming" | "Not in" | "Absent" | "Stuck";
 
 /**
  * `nowHM`/`startHM`/`endHM` are "HH:MM" wall-clock strings in the workplace
  * timezone. `workDate`/`today` are "YYYY-MM-DD". `hasOpenShift` = an
- * attendance row with clock_in set and clock_out still null.
- * `hasClosedShift` = an attendance row with clock_out set for that day.
+ * attendance row with clock_in set and clock_out still null, for THIS
+ * work_date. `hasClosedShift` = an attendance row with clock_out set for
+ * that day. `hasStaleOpenShift` = they have an open clock-in *somewhere*
+ * (any date) older than the missing-clockout threshold — a forgotten
+ * clock-out, not a real "currently working" signal, so it must never read
+ * as "On Shift" just because some row, however old, is still unclosed.
  */
 export function classifyShiftStatus(args: {
   workDate: string;
@@ -18,8 +22,10 @@ export function classifyShiftStatus(args: {
   nowHM: string;
   hasOpenShift: boolean;
   hasClosedShift: boolean;
+  hasStaleOpenShift?: boolean;
 }): ShiftStatus {
-  const { workDate, today, startHM, nowHM, hasOpenShift, hasClosedShift } = args;
+  const { workDate, today, startHM, nowHM, hasOpenShift, hasClosedShift, hasStaleOpenShift } = args;
+  if (hasStaleOpenShift) return "Stuck";
   if (hasOpenShift) return "On Shift";
   if (hasClosedShift) return "Done";
   if (workDate < today) return "Absent"; // a past day with a shift but no attendance at all
@@ -33,4 +39,14 @@ export const SHIFT_STATUS_BADGE: Record<ShiftStatus, string> = {
   Upcoming: "bg-blue-100 text-blue-700",
   "Not in": "bg-amber-100 text-amber-700",
   Absent: "bg-red-100 text-red-700",
+  Stuck: "bg-red-100 text-red-700",
+};
+
+export const SHIFT_STATUS_LABEL: Record<ShiftStatus, string> = {
+  "On Shift": "On Shift",
+  Done: "Done",
+  Upcoming: "Upcoming",
+  "Not in": "Pending clock-in",
+  Absent: "Absent",
+  Stuck: "Forgotten clock-out",
 };

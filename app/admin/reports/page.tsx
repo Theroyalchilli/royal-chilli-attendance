@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { clockTime, hm } from "@/lib/format";
-import { SHIFT_STATUS_BADGE, type ShiftStatus } from "@/lib/shift-status";
+import { SHIFT_STATUS_BADGE, SHIFT_STATUS_LABEL, type ShiftStatus } from "@/lib/shift-status";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -20,7 +20,7 @@ function addDays(iso: string, n: number) {
 
 type AttRow = {
   staff_id: number; staff_name: string; work_date: string;
-  clock_in: string | null; clock_out: string | null; net_work_seconds: number;
+  clock_in: string | null; clock_out: string | null; net_work_seconds: number; is_stuck: boolean;
 };
 type PendingRow = { staff_id: number; staff_name: string; status: ShiftStatus };
 type TodayRow = { staff_id: number; staff_name: string; clockIn: string; clockOut: string; net: string; status: ShiftStatus };
@@ -56,7 +56,7 @@ export default function ReportsPage() {
       staff_id: r.staff_id, staff_name: r.staff_name,
       clockIn: clockTime(r.clock_in), clockOut: r.clock_out ? clockTime(r.clock_out) : "—",
       net: r.clock_out ? hm(r.net_work_seconds) : "—",
-      status: (r.clock_out ? "Done" : "On Shift") as ShiftStatus,
+      status: (r.is_stuck ? "Stuck" : r.clock_out ? "Done" : "On Shift") as ShiftStatus,
     }));
     const pending: TodayRow[] = (d.pending ?? []).map((p: PendingRow) => ({
       staff_id: p.staff_id, staff_name: p.staff_name, clockIn: "—", clockOut: "—", net: "—", status: p.status,
@@ -143,7 +143,7 @@ export default function ReportsPage() {
                     <td className="px-3 py-2">{r.clockIn}</td>
                     <td className="px-3 py-2">{r.clockOut}</td>
                     <td className="px-3 py-2">{r.net}</td>
-                    <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SHIFT_STATUS_BADGE[r.status]}`}>{r.status === "Not in" ? "Pending clock-in" : r.status}</span></td>
+                    <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SHIFT_STATUS_BADGE[r.status]}`}>{SHIFT_STATUS_LABEL[r.status]}</span></td>
                   </tr>
                 ))}
               </tbody>

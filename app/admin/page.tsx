@@ -4,24 +4,18 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 import { hm } from "@/lib/format";
+import { SHIFT_STATUS_BADGE, SHIFT_STATUS_LABEL, type ShiftStatus } from "@/lib/shift-status";
 
 type Dash = {
   today: string;
   employees: number;
-  todaysShifts: { staff_name: string; role: string; start: string; end: string; status: string }[];
+  todaysShifts: { staff_name: string; role: string; start: string; end: string; status: ShiftStatus }[];
   attendance: { total: number; present: number; late: number; absent: number; onLeave: number };
   corrections: { id: number; staff_name: string; date: string; issue: string; status: string }[];
   timesheetPreview: { staff_name: string; net_seconds: number; overtime_seconds: number }[];
   weekTotalSeconds: number;
   attendanceRate: { label: string; rate: number }[];
   stuck: { id: number; staff_name: string; clock_in: string }[];
-};
-
-const SHIFT_BADGE: Record<string, string> = {
-  "On Shift": "bg-emerald-100 text-emerald-700",
-  Done: "bg-neutral-100 text-neutral-500",
-  Upcoming: "bg-blue-100 text-blue-700",
-  "Not in": "bg-amber-100 text-amber-700",
 };
 const CORR_BADGE: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",
@@ -96,7 +90,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-neutral-500">{s.start} – {s.end}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SHIFT_BADGE[s.status] ?? "bg-neutral-100"}`}>{s.status}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SHIFT_STATUS_BADGE[s.status] ?? "bg-neutral-100"}`}>{SHIFT_STATUS_LABEL[s.status] ?? s.status}</span>
                   </div>
                 </div>
               ))}

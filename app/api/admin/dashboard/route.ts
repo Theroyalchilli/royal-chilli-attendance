@@ -59,7 +59,10 @@ export async function GET(req: NextRequest) {
   const roleById = new Map((staff ?? []).map((s) => [s.id, s.role]));
 
   // --- today's shifts w/ status ---
-  const openSet = new Set((openRows ?? []).map((r) => r.staff_id));
+  // An open row older than the missing-clockout threshold is a forgotten
+  // clock-out, not "currently working" — never let it read as "On Shift".
+  const openSet = new Set((openRows ?? []).filter((r) => r.clock_in >= staleBefore).map((r) => r.staff_id));
+  const staleOpenSet = new Set((openRows ?? []).filter((r) => r.clock_in < staleBefore).map((r) => r.staff_id));
   const clockedOutToday = new Set((attToday ?? []).filter((r) => r.clock_out).map((r) => r.staff_id));
   const nowHM = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
   const todaysShifts = (shiftsToday ?? [])
@@ -71,6 +74,7 @@ export async function GET(req: NextRequest) {
       status: classifyShiftStatus({
         workDate: today, today, startHM: s.start_time.slice(0, 5), nowHM,
         hasOpenShift: openSet.has(s.staff_id), hasClosedShift: clockedOutToday.has(s.staff_id),
+        hasStaleOpenShift: staleOpenSet.has(s.staff_id),
       }),
     }))
     .sort((a, b) => a.start.localeCompare(b.start));

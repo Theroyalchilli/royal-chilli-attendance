@@ -28,22 +28,29 @@ export async function GET(req: NextRequest) {
   if (to) shiftsQ = shiftsQ.lte("shift_date", to);
   if (staffId) shiftsQ = shiftsQ.eq("staff_id", Number(staffId));
 
-  const [{ data: rows, error }, { data: staff }, { data: shifts }, settings] = await Promise.all([
+  const [{ data: rows, error }, { data: staff }, { data: shifts }, settings, { data: openRows }] = await Promise.all([
     q,
     supabase.from("staff").select("id, name").eq("active", 1).order("name"),
     shiftsQ,
     getAttendanceSettings(),
+    // Every currently-open shift, any date — used to catch a forgotten
+    // clock-out from a day outside whatever range is being viewed right now.
+    supabase.from("attendance").select("staff_id, clock_in").is("clock_out", null).not("clock_in", "is", null),
   ]);
   if (error) return NextResponse.json({ error: "Failed to load" }, { status: 500 });
 
   const nameById = new Map((staff ?? []).map((s) => [s.id, s.name]));
   const today = localDateString(new Date(), settings.timezone);
   const nowHM = new Intl.DateTimeFormat("en-GB", { timeZone: settings.timezone, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
+  const staleBefore = new Date(Date.now() - settings.missingClockoutHours * 3600_000).toISOString();
+  const staleOpenSet = new Set((openRows ?? []).filter((r) => r.clock_in < staleBefore).map((r) => r.staff_id));
 
   // A shift with no matching attendance row at all — someone rota'd who
   // hasn't clocked in (today) or never showed (a past day). Never future
   // dates: nothing to check yet. Surfaced separately from `rows` since these
   // have no attendance id to edit — the UI offers "Clock in now" instead.
+  // Staff with a stale open shift from another day show "Stuck" here even
+  // though today's own shift has nothing recorded — that's the real story.
   const attendedKey = new Set((rows ?? []).map((r) => `${r.staff_id}-${r.work_date}`));
   const pending = (shifts ?? [])
     .filter((s) => s.shift_date <= today && !attendedKey.has(`${s.staff_id}-${s.shift_date}`))
@@ -55,13 +62,17 @@ export async function GET(req: NextRequest) {
       shift_end: s.end_time.slice(0, 5),
       status: classifyShiftStatus({
         workDate: s.shift_date, today, startHM: s.start_time.slice(0, 5), nowHM,
-        hasOpenShift: false, hasClosedShift: false,
+        hasOpenShift: false, hasClosedShift: false, hasStaleOpenShift: staleOpenSet.has(s.staff_id),
       }),
     }))
     .filter((p) => p.status !== "Upcoming"); // today, not due to start yet — nothing to flag
 
   return NextResponse.json({
-    rows: (rows ?? []).map((r) => ({ ...r, staff_name: nameById.get(r.staff_id) ?? "?" })),
+    rows: (rows ?? []).map((r) => ({
+      ...r,
+      staff_name: nameById.get(r.staff_id) ?? "?",
+      is_stuck: !r.clock_out && !!r.clock_in && r.clock_in < staleBefore,
+    })),
     staff: staff ?? [],
     pending,
   });

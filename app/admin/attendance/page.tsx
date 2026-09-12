@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { clockTime, dayLabel, hm } from "@/lib/format";
-import { SHIFT_STATUS_BADGE, type ShiftStatus } from "@/lib/shift-status";
+import { SHIFT_STATUS_BADGE, SHIFT_STATUS_LABEL, type ShiftStatus } from "@/lib/shift-status";
 
 type Row = {
   id: number;
@@ -22,6 +22,7 @@ type Row = {
   approval_status: string;
   photo_missing: boolean;
   notes: string | null;
+  is_stuck: boolean;
 };
 type Staff = { id: number; name: string };
 type Pending = { staff_id: number; staff_name: string; work_date: string; shift_start: string; shift_end: string; status: ShiftStatus };
@@ -208,7 +209,7 @@ export default function AttendancePage() {
                         <td className="px-3 py-2 text-neutral-400">—</td>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-2">
-                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SHIFT_STATUS_BADGE[p.status]}`}>{p.status === "Not in" ? "Pending clock-in" : p.status}</span>
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SHIFT_STATUS_BADGE[p.status]}`}>{SHIFT_STATUS_LABEL[p.status]}</span>
                             <button onClick={() => setQuickClockIn(p)} className="rounded-lg bg-brand px-2 py-1 text-xs font-semibold text-white hover:bg-brand-dark">Clock in now</button>
                           </div>
                         </td>
@@ -219,14 +220,15 @@ export default function AttendancePage() {
                         <td className="px-3 py-2 font-medium">{r.staff_name}</td>
                         <td className="px-3 py-2 text-neutral-400">—</td>
                         <td className="px-3 py-2">{clockTime(r.clock_in)}</td>
-                        <td className="px-3 py-2">{r.clock_out ? clockTime(r.clock_out) : <span className="text-emerald-600">open</span>}</td>
+                        <td className="px-3 py-2">{r.clock_out ? clockTime(r.clock_out) : <span className={r.is_stuck ? "text-red-600" : "text-emerald-600"}>open</span>}</td>
                         <td className="px-3 py-2">{r.clock_out ? hm(r.net_work_seconds) : "—"}</td>
                         <td className="px-3 py-2 text-xs">
+                          {r.is_stuck && <span className="mr-1 rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700">forgotten clock-out</span>}
                           {r.late_seconds > 0 && <span className="mr-1 text-amber-600">late {hm(r.late_seconds)}</span>}
                           {r.adjustment_seconds !== 0 && <span className="mr-1 text-blue-600">adj {r.adjustment_seconds > 0 ? "+" : ""}{Math.round(r.adjustment_seconds / 60)}m</span>}
                           {r.photo_missing && <span className="mr-1 text-neutral-400">no photo</span>}
-                          {r.approval_status === "pending" && <span className="text-amber-600">needs review</span>}
-                          {!r.clock_out && !r.late_seconds && r.adjustment_seconds === 0 && !r.photo_missing && r.approval_status !== "pending" && <span className="text-emerald-600">on shift</span>}
+                          {r.approval_status === "pending" && !r.is_stuck && <span className="text-amber-600">needs review</span>}
+                          {!r.clock_out && !r.is_stuck && !r.late_seconds && r.adjustment_seconds === 0 && !r.photo_missing && r.approval_status !== "pending" && <span className="text-emerald-600">on shift</span>}
                         </td>
                       </tr>
                     ))}
