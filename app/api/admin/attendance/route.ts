@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/supabase";
 import { requireManager } from "@/lib/guard";
-import { getAttendanceSettings } from "@/lib/settings";
+import { getAttendanceSettings, localDateString } from "@/lib/settings";
 import { resolveScheduleFor, type StaffRota } from "@/lib/rota";
 import { recompute, audit } from "@/lib/attendance-write";
+import { classifyShiftStatus } from "@/lib/shift-status";
 
 export const dynamic = "force-dynamic";
 
@@ -22,16 +23,47 @@ export async function GET(req: NextRequest) {
   if (to) q = q.lte("work_date", to);
   if (staffId) q = q.eq("staff_id", Number(staffId));
 
-  const [{ data: rows, error }, { data: staff }] = await Promise.all([
+  let shiftsQ = supabase.from("shifts").select("staff_id, shift_date, start_time, end_time").neq("status", "cancelled");
+  if (from) shiftsQ = shiftsQ.gte("shift_date", from);
+  if (to) shiftsQ = shiftsQ.lte("shift_date", to);
+  if (staffId) shiftsQ = shiftsQ.eq("staff_id", Number(staffId));
+
+  const [{ data: rows, error }, { data: staff }, { data: shifts }, settings] = await Promise.all([
     q,
     supabase.from("staff").select("id, name").eq("active", 1).order("name"),
+    shiftsQ,
+    getAttendanceSettings(),
   ]);
   if (error) return NextResponse.json({ error: "Failed to load" }, { status: 500 });
 
   const nameById = new Map((staff ?? []).map((s) => [s.id, s.name]));
+  const today = localDateString(new Date(), settings.timezone);
+  const nowHM = new Intl.DateTimeFormat("en-GB", { timeZone: settings.timezone, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
+
+  // A shift with no matching attendance row at all — someone rota'd who
+  // hasn't clocked in (today) or never showed (a past day). Never future
+  // dates: nothing to check yet. Surfaced separately from `rows` since these
+  // have no attendance id to edit — the UI offers "Clock in now" instead.
+  const attendedKey = new Set((rows ?? []).map((r) => `${r.staff_id}-${r.work_date}`));
+  const pending = (shifts ?? [])
+    .filter((s) => s.shift_date <= today && !attendedKey.has(`${s.staff_id}-${s.shift_date}`))
+    .map((s) => ({
+      staff_id: s.staff_id,
+      staff_name: nameById.get(s.staff_id) ?? "?",
+      work_date: s.shift_date,
+      shift_start: s.start_time.slice(0, 5),
+      shift_end: s.end_time.slice(0, 5),
+      status: classifyShiftStatus({
+        workDate: s.shift_date, today, startHM: s.start_time.slice(0, 5), nowHM,
+        hasOpenShift: false, hasClosedShift: false,
+      }),
+    }))
+    .filter((p) => p.status !== "Upcoming"); // today, not due to start yet — nothing to flag
+
   return NextResponse.json({
     rows: (rows ?? []).map((r) => ({ ...r, staff_name: nameById.get(r.staff_id) ?? "?" })),
     staff: staff ?? [],
+    pending,
   });
 }
 

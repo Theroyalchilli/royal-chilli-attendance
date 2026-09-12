@@ -83,7 +83,7 @@ export default function AdminDashboard() {
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         {/* Rota */}
-        <Card title="Rota" subtitle="Today's shifts" href="/admin/rota">
+        <Card title="Rota" subtitle="Today's shifts" href="/admin/attendance">
           {d.todaysShifts.length === 0 ? (
             <p className="text-sm text-neutral-400">No shifts scheduled today.</p>
           ) : (

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/supabase";
 import { requireManager } from "@/lib/guard";
 import { getAttendanceSettings, localDateString } from "@/lib/settings";
+import { classifyShiftStatus } from "@/lib/shift-status";
 
 export const dynamic = "force-dynamic";
 
@@ -67,13 +68,10 @@ export async function GET(req: NextRequest) {
       role: s.position || roleById.get(s.staff_id) || "",
       start: s.start_time.slice(0, 5),
       end: s.end_time.slice(0, 5),
-      status: openSet.has(s.staff_id)
-        ? "On Shift"
-        : clockedOutToday.has(s.staff_id)
-          ? "Done"
-          : s.start_time.slice(0, 5) > nowHM
-            ? "Upcoming"
-            : "Not in",
+      status: classifyShiftStatus({
+        workDate: today, today, startHM: s.start_time.slice(0, 5), nowHM,
+        hasOpenShift: openSet.has(s.staff_id), hasClosedShift: clockedOutToday.has(s.staff_id),
+      }),
     }))
     .sort((a, b) => a.start.localeCompare(b.start));
 
