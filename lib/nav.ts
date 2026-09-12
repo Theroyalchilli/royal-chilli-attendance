@@ -20,6 +20,7 @@ export function navFor(role: StaffRole): NavGroup[] {
   if (isEmployee) return [{ items: me }];
 
   const team: NavItem[] = [
+    { href: "/api/sso/staffhub", label: "Staff Hub", icon: "🍽️" },
     { href: "/admin", label: "Dashboard", icon: "🏠" },
     { href: "/admin/rota", label: "Rota", icon: "📅" },
     { href: "/admin/attendance", label: "Attendance", icon: "✅" },
