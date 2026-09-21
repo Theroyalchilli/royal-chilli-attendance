@@ -121,7 +121,7 @@ export default function Shell({
         <header
           className={`flex items-center justify-between px-4 py-3 print:hidden ${
             isEmployee
-              ? "bg-brand text-white shadow-sm md:border-b md:border-neutral-200 md:bg-white md:text-inherit md:shadow-none"
+              ? "sticky top-0 z-20 bg-brand text-white shadow-sm md:static md:border-b md:border-neutral-200 md:bg-white md:text-inherit md:shadow-none"
               : "border-b border-neutral-200 bg-white"
           }`}
         >
