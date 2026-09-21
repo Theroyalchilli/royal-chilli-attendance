@@ -97,7 +97,7 @@ export default function MeDashboard() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="text-2xl font-bold">{greeting()}{name ? `, ${name}` : ""}</h1>
+      <h1 className="text-2xl font-bold">{greeting()}{name ? `, ${name}` : ""} 🎉</h1>
 
       <div className="mt-5">
         <ClockButton />
