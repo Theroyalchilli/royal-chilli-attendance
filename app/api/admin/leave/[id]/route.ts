@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     leave.staff_id,
     "leave_reviewed",
     `Your ${leave.leave_type} leave request (${leave.start_date} to ${leave.end_date}) was ${status}.`,
-    "/me/leave",
+    "/me/requests?tab=leave",
   );
   return NextResponse.json({ row: updated });
 }

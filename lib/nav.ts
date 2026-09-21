@@ -13,11 +13,11 @@ export function navFor(role: StaffRole): NavGroup[] {
     { href: "/me", label: isEmployee ? "Dashboard" : "My Dashboard", icon: "🏠" },
     { href: "/me/rota", label: "My Rota", icon: "📅" },
     { href: "/me/attendance", label: "My Hours", icon: "✅" },
-    { href: "/me/leave", label: isEmployee ? "Time Off" : "My Time Off", icon: "🌴" },
-    { href: "/me/corrections", label: isEmployee ? "Corrections" : "My Corrections", icon: "✏️" },
+    { href: "/me/requests", label: isEmployee ? "Requests" : "My Requests", icon: "🌴" },
     { href: "/me/payslips", label: isEmployee ? "Payslips" : "My Payslips", icon: "💷" },
   ];
 
+  // Employees get a fixed bottom nav (BottomNav) instead of this sidebar/drawer.
   if (isEmployee) return [{ items: me }];
 
   const team: NavItem[] = [

@@ -30,7 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .update({ status: "rejected", reviewed_by: g.session.id, reviewed_at: new Date().toISOString(), review_note: review_note || null })
       .eq("id", id);
     await audit(g.session.id, "correction_rejected", id, corr, null);
-    await notify(corr.staff_id, "correction_reviewed", "Your correction request was declined.", "/me/corrections");
+    await notify(corr.staff_id, "correction_reviewed", "Your correction request was declined.", "/me/requests?tab=corrections");
     return NextResponse.json({ success: true });
   }
 
@@ -58,6 +58,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .eq("id", id);
 
   await audit(g.session.id, "correction_approved", corr.attendance_id, attBefore, updated);
-  await notify(corr.staff_id, "correction_reviewed", "Your correction request was approved.", "/me/corrections");
+  await notify(corr.staff_id, "correction_reviewed", "Your correction request was approved.", "/me/requests?tab=corrections");
   return NextResponse.json({ row: updated });
 }

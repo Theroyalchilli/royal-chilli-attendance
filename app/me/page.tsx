@@ -70,7 +70,7 @@ export default function MeDashboard() {
         },
         {
           title: "Corrections",
-          href: "/me/corrections",
+          href: "/me/requests?tab=corrections",
           body: <p className="text-sm">{pendingCorr > 0 ? `${pendingCorr} awaiting review` : "Nothing pending"}</p>,
         },
         {

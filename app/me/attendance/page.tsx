@@ -127,7 +127,7 @@ export default function MyAttendance() {
       )}
       <p className="mt-3 text-xs text-neutral-400">
         These are your raw clock-in/out times. If something&apos;s wrong,{" "}
-        <a href="/me/corrections" className="text-brand hover:underline">raise a correction</a>.
+        <a href="/me/requests?tab=corrections" className="text-brand hover:underline">raise a correction</a>.
       </p>
     </div>
   );
