@@ -13,6 +13,14 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "The Royal Chilli — Attendance",
   robots: { index: false, follow: false },
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/icon-192.png",
+  },
 };
 
 export const viewport: Viewport = {
