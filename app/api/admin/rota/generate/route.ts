@@ -42,6 +42,16 @@ export async function POST(req: NextRequest) {
     .neq("status", "cancelled");
   const taken = new Set((existing ?? []).map((s) => `${s.staff_id}:${s.shift_date}`));
 
+  // never schedule over approved leave
+  const { data: leave } = await supabase
+    .from("leave_requests")
+    .select("staff_id, start_date, end_date")
+    .eq("status", "approved")
+    .lte("start_date", days[6])
+    .gte("end_date", days[0]);
+  const onLeave = (staffId: number, date: string) =>
+    (leave ?? []).some((l) => l.staff_id === staffId && date >= l.start_date && date <= l.end_date);
+
   const inserts: {
     staff_id: number;
     shift_date: string;
@@ -65,7 +75,7 @@ export async function POST(req: NextRequest) {
       const idx = prev.indexOf(s.shift_date);
       if (idx < 0) continue;
       const target = days[idx];
-      if (taken.has(`${s.staff_id}:${target}`)) continue;
+      if (taken.has(`${s.staff_id}:${target}`) || onLeave(s.staff_id, target)) continue;
       inserts.push({
         staff_id: s.staff_id,
         shift_date: target,
@@ -84,7 +94,7 @@ export async function POST(req: NextRequest) {
         const [y, m, d] = date.split("-").map(Number);
         const wd = localIsoWeekday(new Date(Date.UTC(y, m - 1, d, 12)), settings.timezone);
         if (!working.includes(wd)) continue;
-        if (taken.has(`${s.id}:${date}`)) continue;
+        if (taken.has(`${s.id}:${date}`) || onLeave(s.id, date)) continue;
         inserts.push({
           staff_id: s.id,
           shift_date: date,

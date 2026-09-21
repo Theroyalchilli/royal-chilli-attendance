@@ -13,6 +13,7 @@ export function navFor(role: StaffRole): NavGroup[] {
     { href: "/me", label: isEmployee ? "Dashboard" : "My Dashboard", icon: "🏠" },
     { href: "/me/rota", label: "My Rota", icon: "📅" },
     { href: "/me/attendance", label: "My Hours", icon: "✅" },
+    { href: "/me/leave", label: isEmployee ? "Time Off" : "My Time Off", icon: "🌴" },
     { href: "/me/corrections", label: isEmployee ? "Corrections" : "My Corrections", icon: "✏️" },
     { href: "/me/payslips", label: isEmployee ? "Payslips" : "My Payslips", icon: "💷" },
   ];
@@ -24,6 +25,7 @@ export function navFor(role: StaffRole): NavGroup[] {
     { href: "/admin", label: "Dashboard", icon: "🏠" },
     { href: "/admin/rota", label: "Rota", icon: "📅" },
     { href: "/admin/attendance", label: "Attendance", icon: "✅" },
+    { href: "/admin/leave", label: "Time Off", icon: "🌴" },
     { href: "/admin/corrections", label: "Corrections", icon: "✏️" },
     { href: "/admin/timesheets", label: "Timesheets", icon: "⏱️" },
     { href: "/admin/reports", label: "Reports", icon: "📊" },

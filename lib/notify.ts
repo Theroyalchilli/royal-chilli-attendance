@@ -1,6 +1,6 @@
 import supabase from "./supabase";
 
-type NotifType = "correction_submitted" | "correction_reviewed" | "missed_clockout";
+type NotifType = "correction_submitted" | "correction_reviewed" | "missed_clockout" | "leave_submitted" | "leave_reviewed";
 
 /** Fire an in-app notification. Best-effort — never blocks the caller. */
 export async function notify(
