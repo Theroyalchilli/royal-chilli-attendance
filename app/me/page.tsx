@@ -7,6 +7,13 @@ import ClockButton from "@/components/me/ClockButton";
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 function thisWeek() {
   const now = new Date();
   const mon = new Date(now);
@@ -90,7 +97,7 @@ export default function MeDashboard() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="text-2xl font-bold">Hi {name}</h1>
+      <h1 className="text-2xl font-bold">{greeting()}{name ? `, ${name}` : ""}</h1>
 
       <div className="mt-5">
         <ClockButton />
