@@ -72,7 +72,10 @@ export default function NotificationBell() {
       });
     }
     setOpen(false);
-    if (n.link) router.push(n.link);
+    // A link into another app (e.g. the POS Staff Hub) isn't a route this
+    // app's router knows about — router.push only handles same-app paths.
+    if (n.link?.startsWith("http")) window.location.href = n.link;
+    else if (n.link) router.push(n.link);
     else load();
   }
 
