@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   if (!token) return NextResponse.redirect(new URL("/login", req.url));
 
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, JWT_SECRET, { algorithms: ["HS256"] });
     if (payload.purpose !== "sso") throw new Error("not an sso handoff token");
 
     const user: SessionUser = {

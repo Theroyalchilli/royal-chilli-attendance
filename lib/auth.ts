@@ -12,6 +12,7 @@ const JWT_SECRET = new TextEncoder().encode(
 );
 
 const COOKIE_NAME = "pos_session";
+const VALID_ROLES = new Set<SessionUser["role"]>(["employee", "manager", "hr", "admin"]);
 
 export async function createSession(user: SessionUser): Promise<string> {
   return new SignJWT({ id: user.id, name: user.name, role: user.role })
@@ -21,15 +22,23 @@ export async function createSession(user: SessionUser): Promise<string> {
     .sign(JWT_SECRET);
 }
 
+// A staff session token carries no `type`/`purpose` marker of its own, and
+// this app shares JWT_SECRET with the POS, which also mints a 30-day
+// customer_session token and a password-reset token under that same secret.
+// Without validating shape here, either of those would verify successfully
+// and get treated as a logged-in staff member by any route that only checks
+// "is there a session" rather than also checking role. Requiring `role` to
+// be a real staff role — which those other token types never set — closes
+// that gap.
 async function verify(token: string | undefined): Promise<SessionUser | null> {
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return {
-      id: payload.id as number,
-      name: payload.name as string,
-      role: payload.role as SessionUser["role"],
-    };
+    const { payload } = await jwtVerify(token, JWT_SECRET, { algorithms: ["HS256"] });
+    const { id, name, role } = payload;
+    if (typeof id !== "number" || typeof name !== "string" || !VALID_ROLES.has(role as SessionUser["role"])) {
+      return null;
+    }
+    return { id, name, role: role as SessionUser["role"] };
   } catch {
     return null;
   }
