@@ -67,18 +67,31 @@ export default function Shell({
             {group.label && (
               <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40">{group.label}</p>
             )}
-            {group.items.map((n) => (
-              <Link
-                key={n.href}
-                href={n.href}
-                className={`mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
-                  active(n.href) ? "bg-white/15 font-semibold" : "text-white/70 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                <span className="w-5 text-center">{n.icon}</span>
-                {n.label}
-              </Link>
-            ))}
+            {group.items.map((n) => {
+              const itemClassName = `mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                active(n.href) ? "bg-white/15 font-semibold" : "text-white/70 hover:bg-white/10 hover:text-white"
+              }`;
+              // /api/sso/staffhub redirects into a different app (the POS) —
+              // it isn't a page this app's router can render, so Link's
+              // client-side navigation (which fetches it as an RSC payload)
+              // intermittently throws. A plain <a> forces a real browser
+              // navigation instead, same fix already applied in
+              // NotificationBell for the same kind of cross-app link.
+              if (n.href.startsWith("/api/")) {
+                return (
+                  <a key={n.href} href={n.href} className={itemClassName}>
+                    <span className="w-5 text-center">{n.icon}</span>
+                    {n.label}
+                  </a>
+                );
+              }
+              return (
+                <Link key={n.href} href={n.href} className={itemClassName}>
+                  <span className="w-5 text-center">{n.icon}</span>
+                  {n.label}
+                </Link>
+              );
+            })}
           </div>
         ))}
       </nav>
