@@ -121,10 +121,64 @@ export async function GET(req: NextRequest) {
     return { id: c.id, staff_name: nameById.get(c.staff_id) ?? "?", date: snap?.work_date ?? "", issue, status: c.status, created_at: c.created_at };
   });
 
+  // Food safety summary — excluded for HR entirely (HANDOVER.md §2: it's a
+  // kitchen operation, not a people one), so the field is just omitted for
+  // them rather than sent empty. Manager/admin both get it; the dashboard
+  // card is read-only either way, matching admin's view-only access to the
+  // module itself.
+  let foodSafety: {
+    checks_done: number; checks_total: number; failures_today: number; signed_off: boolean; overdue_training: number;
+  } | null = null;
+
+  if (g.session.role !== "hr") {
+    const dayStart = `${today}T00:00:00.000Z`;
+    const dayEnd = `${today}T23:59:59.999Z`;
+    const [{ count: checksTotal }, { data: checkLogsToday }, { data: tempLogsToday }, { data: signoffToday }, { data: courses }, { data: trainingRecords }] =
+      await Promise.all([
+        supabase.from("fs_check_type").select("id", { count: "exact", head: true }).eq("active", true),
+        supabase.from("fs_check_log").select("check_type_id, ok").gte("created_at", dayStart).lte("created_at", dayEnd),
+        supabase.from("fs_temp_log").select("pass").gte("created_at", dayStart).lte("created_at", dayEnd),
+        supabase.from("fs_signoff").select("id").eq("day", today).maybeSingle(),
+        supabase.from("fs_course").select("id, refresh_months").eq("active", true),
+        supabase.from("fs_training_record").select("staff_id, course_id, date_done").order("date_done", { ascending: false }),
+      ]);
+
+    const doneTypes = new Set((checkLogsToday ?? []).map((c) => c.check_type_id));
+    const failuresToday =
+      (checkLogsToday ?? []).filter((c) => !c.ok).length + (tempLogsToday ?? []).filter((t) => !t.pass).length;
+
+    const staffIdsInScope = new Set((staff ?? []).filter((s) => s.role !== "hr").map((s) => s.id));
+    const latest = new Map<string, string>(); // "staffId:courseId" -> date_done
+    for (const r of trainingRecords ?? []) {
+      const key = `${r.staff_id}:${r.course_id}`;
+      if (!latest.has(key)) latest.set(key, r.date_done);
+    }
+    let overdueTraining = 0;
+    for (const staffId of staffIdsInScope) {
+      for (const c of courses ?? []) {
+        if (!c.refresh_months) continue;
+        const dateDone = latest.get(`${staffId}:${c.id}`);
+        if (!dateDone) continue; // not_done isn't counted as "overdue" here — it's a different signal
+        const due = new Date(dateDone);
+        due.setMonth(due.getMonth() + c.refresh_months);
+        if (due.getTime() < Date.now()) overdueTraining++;
+      }
+    }
+
+    foodSafety = {
+      checks_done: doneTypes.size,
+      checks_total: checksTotal ?? 0,
+      failures_today: failuresToday,
+      signed_off: !!signoffToday,
+      overdue_training: overdueTraining,
+    };
+  }
+
   return NextResponse.json({
     today,
     timezone: tz,
     employees: activeCount,
+    foodSafety,
     todaysShifts,
     attendance: {
       total: activeCount,

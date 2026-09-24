@@ -16,6 +16,7 @@ type Dash = {
   weekTotalSeconds: number;
   attendanceRate: { label: string; rate: number }[];
   stuck: { id: number; staff_name: string; clock_in: string }[];
+  foodSafety: { checks_done: number; checks_total: number; failures_today: number; signed_off: boolean; overdue_training: number } | null;
 };
 const CORR_BADGE: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",
@@ -213,7 +214,31 @@ export default function AdminDashboard() {
             </Link>
           </div>
         </Card>
+
+        {/* Food Safety — omitted entirely for HR (see API route) */}
+        {d.foodSafety && <FoodSafetyCard fs={d.foodSafety} />}
       </div>
     </div>
+  );
+}
+
+function FoodSafetyCard({ fs }: { fs: NonNullable<Dash["foodSafety"]> }) {
+  const allDone = fs.checks_total > 0 && fs.checks_done >= fs.checks_total;
+  const bad = fs.failures_today > 0 || fs.overdue_training > 0;
+  const needsAttention = bad || !fs.signed_off || !allDone;
+  const tone = bad ? { text: "text-red-600", bg: "bg-red-50" } : needsAttention ? { text: "text-amber-600", bg: "bg-amber-50" } : { text: "text-emerald-600", bg: "bg-emerald-50" };
+
+  let subtext = "All clear";
+  if (fs.failures_today > 0) subtext = `${fs.failures_today} check${fs.failures_today === 1 ? "" : "s"} flagged today`;
+  else if (fs.overdue_training > 0) subtext = `${fs.overdue_training} training record${fs.overdue_training === 1 ? "" : "s"} overdue`;
+  else if (!fs.signed_off) subtext = "Not signed off yet";
+
+  return (
+    <Card title="Food Safety" subtitle="Today's checks" href="/me/food-safety">
+      <div className={`rounded-lg p-3 ${tone.bg}`}>
+        <div className={`text-2xl font-bold ${tone.text}`}>{fs.checks_done}/{fs.checks_total}</div>
+        <div className="mt-0.5 text-xs text-neutral-500">{subtext}</div>
+      </div>
+    </Card>
   );
 }
