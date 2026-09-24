@@ -234,7 +234,7 @@ function FoodSafetyCard({ fs }: { fs: NonNullable<Dash["foodSafety"]> }) {
   else if (!fs.signed_off) subtext = "Not signed off yet";
 
   return (
-    <Card title="Food Safety" subtitle="Today's checks" href="/me/food-safety">
+    <Card title="Food Safety" subtitle="Today's checks" href="/admin/food-safety">
       <div className={`rounded-lg p-3 ${tone.bg}`}>
         <div className={`text-2xl font-bold ${tone.text}`}>{fs.checks_done}/{fs.checks_total}</div>
         <div className="mt-0.5 text-xs text-neutral-500">{subtext}</div>

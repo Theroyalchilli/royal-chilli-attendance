@@ -54,7 +54,7 @@ export function navFor(role: StaffRole): NavGroup[] {
   // admin sees the same links but every screen behind them is view-only.
   if (role !== "hr") {
     team.push(
-      { href: "/me/food-safety", label: "Food Safety", icon: "📋" },
+      { href: "/admin/food-safety", label: "Food Safety", icon: "📋" },
       { href: "/admin/food-safety/trace", label: "Trace", icon: "🚚" },
       { href: "/admin/food-safety/training", label: "Team Training", icon: "🎓" },
       { href: "/admin/food-safety/records", label: "Food Safety Records", icon: "🖨️" },

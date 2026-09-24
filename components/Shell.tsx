@@ -40,9 +40,15 @@ export default function Shell({
     };
   }, [drawerOpen]);
 
-  // exact match for the two "home" routes, prefix match for the rest
+  // Exact match for the "home" routes and for /admin/food-safety — the
+  // latter needs it too, or it wrongly stays highlighted on its own
+  // sibling pages (Trace/Training/Records/Config all sit one level under
+  // it in the URL, so a plain prefix match can't tell them apart).
+  // Prefix match for everything else.
   const active = (href: string) =>
-    href === "/admin" || href === "/me" ? pathname === href : pathname === href || pathname.startsWith(href + "/");
+    href === "/admin" || href === "/me" || href === "/admin/food-safety"
+      ? pathname === href
+      : pathname === href || pathname.startsWith(href + "/");
 
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST" });
