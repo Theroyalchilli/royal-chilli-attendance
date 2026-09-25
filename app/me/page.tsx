@@ -84,7 +84,7 @@ function WeekGlance({ data, color }: { data: Bar7[]; color: string }) {
   );
 }
 
-type Card = { title: string; href: string; body: React.ReactNode };
+type Card = { title: string; href: string; body: React.ReactNode; interactive?: boolean };
 
 export default function MeDashboard() {
   const [name, setName] = useState("");
@@ -153,11 +153,13 @@ export default function MeDashboard() {
         {
           title: "My Rota",
           href: "/me/rota",
+          interactive: true,
           body: <WeekGlance data={rotaData} color="#E34435" />,
         },
         {
           title: "My Hours",
           href: "/me/attendance",
+          interactive: true,
           body: (
             <>
               <WeekGlance data={hoursData} color="#10b981" />
@@ -196,25 +198,35 @@ export default function MeDashboard() {
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        {(cards ?? Array.from({ length: 4 }, () => null)).map((c, i) => (
-          <Link
-            key={i}
-            href={c?.href ?? "#"}
-            className="rounded-xl border border-neutral-200 bg-white p-5 transition hover:border-brand"
-          >
-            {c ? (
-              <>
-                <div className="flex items-center justify-between">
-                  <h2 className="font-semibold">{c.title}</h2>
-                  <span className="text-xs text-brand">View →</span>
-                </div>
-                <div className="mt-2">{c.body}</div>
-              </>
-            ) : (
+        {(cards ?? Array.from({ length: 4 }, () => null)).map((c, i) =>
+          !c ? (
+            <div key={i} className="rounded-xl border border-neutral-200 bg-white p-5">
               <div className="h-16 animate-pulse rounded bg-neutral-100" />
-            )}
-          </Link>
-        ))}
+            </div>
+          ) : c.interactive ? (
+            // Chart lives outside the link so a tap on a bar shows its tooltip
+            // instead of navigating — only the header row goes to the full page.
+            <div key={i} className="rounded-xl border border-neutral-200 bg-white p-5">
+              <Link href={c.href} className="flex items-center justify-between">
+                <h2 className="font-semibold">{c.title}</h2>
+                <span className="text-xs text-brand hover:underline">View →</span>
+              </Link>
+              <div className="mt-2">{c.body}</div>
+            </div>
+          ) : (
+            <Link
+              key={i}
+              href={c.href}
+              className="rounded-xl border border-neutral-200 bg-white p-5 transition hover:border-brand"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold">{c.title}</h2>
+                <span className="text-xs text-brand">View →</span>
+              </div>
+              <div className="mt-2">{c.body}</div>
+            </Link>
+          ),
+        )}
       </div>
     </div>
   );
