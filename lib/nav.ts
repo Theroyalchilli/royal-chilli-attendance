@@ -4,7 +4,10 @@ import type { StaffRole } from "./types";
 // sheet (e.g. Tasks/Allergens/My Training under "Food Safety") — it's
 // ignored everywhere else (the plain sidebar list, mobile drawer).
 export type NavItem = { href: string; label: string; icon: string; group?: string };
-export type NavGroup = { label?: string; items: NavItem[] };
+// pinnedBottom groups render outside the scrollable nav list, just above
+// the user/sign-out block at the foot of the sidebar — used for Settings,
+// which shouldn't scroll away with the rest of the list.
+export type NavGroup = { label?: string; items: NavItem[]; pinnedBottom?: boolean };
 
 // One sidebar for every role. An employee sees only their own section; a
 // manager/hr/admin sees the team console AND their own pages, so they never
@@ -49,22 +52,22 @@ export function navFor(role: StaffRole): NavGroup[] {
     { href: "/admin/employees", label: "Employees", icon: "👥" },
   ];
   // Food safety is deliberately excluded from HR entirely (HANDOVER.md §2) —
-  // it's a kitchen operation, not a people one. Manager gets full access
-  // (Tasks reuses the same role-aware /me/food-safety page employees use);
-  // admin sees the same links but every screen behind them is view-only.
-  if (role !== "hr") {
-    team.push(
-      { href: "/admin/food-safety", label: "Food Safety", icon: "📋" },
-      { href: "/admin/food-safety/trace", label: "Trace", icon: "🚚" },
-      { href: "/admin/food-safety/training", label: "Team Training", icon: "🎓" },
-      { href: "/admin/food-safety/records", label: "Food Safety Records", icon: "🖨️" },
-      { href: "/admin/food-safety/config", label: "Food Safety Config", icon: "⚙️" },
-    );
-  }
-  if (role === "admin") team.push({ href: "/admin/settings", label: "Settings", icon: "⚙️" });
-
-  return [
-    { label: "Team", items: team },
-    { label: "Me", items: me },
+  // it's a kitchen operation, not a people one. Manager and admin both get
+  // full access to Tasks; Trace/Team Training stay manager-edit, admin-view
+  // only. Tasks itself (/admin/food-safety) has no sidebar entry here — it's
+  // reached via the dashboard's Food Safety card instead, same as before.
+  const foodSafety: NavItem[] = [
+    { href: "/admin/food-safety/training", label: "Team Training", icon: "🎓" },
+    { href: "/admin/food-safety/records", label: "Food Safety Records", icon: "🖨️" },
+    { href: "/admin/food-safety/config", label: "Food Safety Config", icon: "⚙️" },
+    { href: "/admin/food-safety/trace", label: "Trace", icon: "🚚" },
   ];
+
+  const groups: NavGroup[] = [{ label: "Team", items: team }];
+  if (role !== "hr") groups.push({ label: "Food Safety", items: foodSafety });
+  groups.push({ label: "Me", items: me });
+  if (role === "admin") {
+    groups.push({ items: [{ href: "/admin/settings", label: "Settings", icon: "⚙️" }], pinnedBottom: true });
+  }
+  return groups;
 }

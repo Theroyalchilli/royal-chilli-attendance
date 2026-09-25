@@ -40,19 +40,45 @@ export default function Shell({
     };
   }, [drawerOpen]);
 
-  // Exact match for the "home" routes and for /admin/food-safety — the
-  // latter needs it too, or it wrongly stays highlighted on its own
-  // sibling pages (Trace/Training/Records/Config all sit one level under
-  // it in the URL, so a plain prefix match can't tell them apart).
-  // Prefix match for everything else.
+  // Exact match for the "home" routes; prefix match for everything else.
   const active = (href: string) =>
-    href === "/admin" || href === "/me" || href === "/admin/food-safety"
+    href === "/admin" || href === "/me"
       ? pathname === href
       : pathname === href || pathname.startsWith(href + "/");
 
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/login");
+  }
+
+  // pinnedBottom groups (just Settings, today) render outside the scrollable
+  // list, above the user/sign-out block, instead of as one more row in it.
+  const mainGroups = nav.filter((g) => !g.pinnedBottom);
+  const pinnedItems = nav.filter((g) => g.pinnedBottom).flatMap((g) => g.items);
+
+  function renderNavItem(n: NavGroup["items"][number]) {
+    const itemClassName = `mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+      active(n.href) ? "bg-white/15 font-semibold" : "text-white/70 hover:bg-white/10 hover:text-white"
+    }`;
+    // /api/sso/staffhub redirects into a different app (the POS) — it isn't
+    // a page this app's router can render, so Link's client-side navigation
+    // (which fetches it as an RSC payload) intermittently throws. A plain
+    // <a> forces a real browser navigation instead, same fix already
+    // applied in NotificationBell for the same kind of cross-app link.
+    if (n.href.startsWith("/api/")) {
+      return (
+        <a key={n.href} href={n.href} className={itemClassName}>
+          <span className="w-5 text-center">{n.icon}</span>
+          {n.label}
+        </a>
+      );
+    }
+    return (
+      <Link key={n.href} href={n.href} className={itemClassName}>
+        <span className="w-5 text-center">{n.icon}</span>
+        {n.label}
+      </Link>
+    );
   }
 
   const sidebarBody = (onClose?: () => void) => (
@@ -68,41 +94,18 @@ export default function Shell({
       </div>
 
       <nav className="px-3">
-        {nav.map((group, gi) => (
+        {mainGroups.map((group, gi) => (
           <div key={gi} className={gi > 0 ? "mt-4" : ""}>
             {group.label && (
               <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/40">{group.label}</p>
             )}
-            {group.items.map((n) => {
-              const itemClassName = `mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
-                active(n.href) ? "bg-white/15 font-semibold" : "text-white/70 hover:bg-white/10 hover:text-white"
-              }`;
-              // /api/sso/staffhub redirects into a different app (the POS) —
-              // it isn't a page this app's router can render, so Link's
-              // client-side navigation (which fetches it as an RSC payload)
-              // intermittently throws. A plain <a> forces a real browser
-              // navigation instead, same fix already applied in
-              // NotificationBell for the same kind of cross-app link.
-              if (n.href.startsWith("/api/")) {
-                return (
-                  <a key={n.href} href={n.href} className={itemClassName}>
-                    <span className="w-5 text-center">{n.icon}</span>
-                    {n.label}
-                  </a>
-                );
-              }
-              return (
-                <Link key={n.href} href={n.href} className={itemClassName}>
-                  <span className="w-5 text-center">{n.icon}</span>
-                  {n.label}
-                </Link>
-              );
-            })}
+            {group.items.map((n) => renderNavItem(n))}
           </div>
         ))}
       </nav>
 
       <div className="mt-4 border-t border-white/10 px-3 py-3">
+        {pinnedItems.length > 0 && <div className="mb-1">{pinnedItems.map((n) => renderNavItem(n))}</div>}
         <div className="px-3 pb-2">
           <p className="text-sm font-medium">{user.name}</p>
           <p className="text-xs text-white/50">{ROLE_LABEL[user.role] ?? user.role}</p>
