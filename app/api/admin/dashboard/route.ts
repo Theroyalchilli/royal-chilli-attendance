@@ -103,13 +103,21 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => a.start.localeCompare(b.start));
 
   // --- attendance breakdown (present on-time / late / on leave / absent) ---
+  // "Absent" only ever counts staff who were actually rota'd today — it used
+  // to be every active staff member minus whoever'd shown up, which meant
+  // everyone read as "absent" first thing in the morning before any shift
+  // had even started, or if they simply had no shift scheduled at all. The
+  // tile's total is scheduled ∪ present ∪ on-leave, so someone who works an
+  // unscheduled shift still shows up as Present rather than being hidden.
+  const scheduled = new Set((shiftsToday ?? []).map((r) => r.staff_id));
   const onLeave = new Set((leaveNow ?? []).map((r) => r.staff_id));
   const present = new Set((attToday ?? []).filter((r) => r.clock_in).map((r) => r.staff_id));
   const late = new Set((attToday ?? []).filter((r) => r.clock_in && (r.late_seconds ?? 0) > 0).map((r) => r.staff_id));
   const lateCount = late.size;
   const presentOnTime = present.size - lateCount;
   const onLeaveCount = [...onLeave].filter((id) => !present.has(id)).length;
-  const absent = activeCount - presentOnTime - lateCount - onLeaveCount;
+  const absentCount = [...scheduled].filter((id) => !present.has(id) && !onLeave.has(id)).length;
+  const attendanceTotal = present.size + onLeaveCount + absentCount;
 
   // --- this week's timesheet preview ---
   const weekByStaff = new Map<number, { net: number; ot: number }>();
@@ -196,10 +204,10 @@ export async function GET(req: NextRequest) {
     foodSafety,
     todaysShifts,
     attendance: {
-      total: activeCount,
+      total: attendanceTotal,
       present: presentOnTime,
       late: lateCount,
-      absent: Math.max(0, absent),
+      absent: absentCount,
       onLeave: onLeaveCount,
     },
     corrections,
