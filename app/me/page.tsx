@@ -91,10 +91,10 @@ export default function MeDashboard() {
   const [cards, setCards] = useState<Card[] | null>(null);
 
   useEffect(() => {
-    const { monday, days, from, to } = thisWeek();
-    const todayIso = new Date().toISOString().slice(0, 10);
+    const load = async () => {
+      const { monday, days, from, to } = thisWeek();
+      const todayIso = new Date().toISOString().slice(0, 10);
 
-    (async () => {
       const [me, rota, att, corr, pay] = await Promise.all([
         fetch("/api/auth/me").then((r) => r.json()).catch(() => null),
         fetch(`/api/me/rota?week_start=${monday}`).then((r) => r.json()).catch(() => ({})),
@@ -186,7 +186,10 @@ export default function MeDashboard() {
           ),
         },
       ]);
-    })();
+    };
+    load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
   }, []);
 
   return (

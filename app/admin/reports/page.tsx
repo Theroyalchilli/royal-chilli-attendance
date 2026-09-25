@@ -46,7 +46,6 @@ export default function ReportsPage() {
   const isToday = from === todayISO() && to === todayISO();
 
   const loadToday = useCallback(async () => {
-    setLoading(true);
     const today = todayISO();
     const p = new URLSearchParams({ from: today, to: today });
     if (staffId) p.set("staff_id", staffId);
@@ -66,7 +65,6 @@ export default function ReportsPage() {
   }, [staffId]);
 
   const loadRange = useCallback(async () => {
-    setLoading(true);
     const p = new URLSearchParams({ type: "hours", from, to });
     if (staffId) p.set("staff_id", staffId);
     const res = await fetch(`/api/admin/reports?${p}`, { cache: "no-store" });
@@ -83,8 +81,11 @@ export default function ReportsPage() {
   }, [from, to, staffId]);
 
   useEffect(() => {
-    if (tab === "today") loadToday();
-    else loadRange();
+    setLoading(true);
+    const load = tab === "today" ? loadToday : loadRange;
+    load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
   }, [tab, loadToday, loadRange]);
 
   return (

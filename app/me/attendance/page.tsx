@@ -46,7 +46,6 @@ export default function MyAttendance() {
       : new Date(from + "T12:00:00Z").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 
   const load = useCallback(async () => {
-    setLoading(true);
     const res = await fetch(`/api/me/attendance?from=${from}&to=${to}`, { cache: "no-store" });
     const d = await res.json();
     setRows(d.rows ?? []);
@@ -54,7 +53,10 @@ export default function MyAttendance() {
     setLoading(false);
   }, [from, to]);
   useEffect(() => {
+    setLoading(true);
     load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
   }, [load]);
 
   return (

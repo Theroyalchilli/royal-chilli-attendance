@@ -29,7 +29,6 @@ export default function MyRota() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    setLoading(true);
     const res = await fetch(`/api/me/rota?week_start=${weekStart}`, { cache: "no-store" });
     const d = await res.json();
     setDays(d.days ?? []);
@@ -39,7 +38,10 @@ export default function MyRota() {
     setLoading(false);
   }, [weekStart]);
   useEffect(() => {
+    setLoading(true);
     load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
   }, [load]);
 
   const shiftFor = (date: string) => shifts.find((s) => s.shift_date === date);

@@ -34,7 +34,6 @@ export default function RotaPage() {
   const [cell, setCell] = useState<{ staff: Staff; date: string; shift: Shift | null } | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
     const res = await fetch(`/api/admin/rota?week_start=${weekStart}`, { cache: "no-store" });
     const d = await res.json();
     setDays(d.days ?? []);
@@ -43,8 +42,13 @@ export default function RotaPage() {
     setLeave(d.leave ?? []);
     setLoading(false);
   }, [weekStart]);
+  // An open shift-cell modal holds its own start/end state, so a poll
+  // refreshing the grid behind it doesn't disturb an in-progress edit.
   useEffect(() => {
+    setLoading(true);
     load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
   }, [load]);
 
   const shiftAt = useMemo(() => {

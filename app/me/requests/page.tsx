@@ -74,7 +74,6 @@ function CorrectionsTab() {
   const [open, setOpen] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
     const res = await fetch("/api/me/corrections", { cache: "no-store" });
     const d = await res.json();
     setRequests(d.requests ?? []);
@@ -82,7 +81,10 @@ function CorrectionsTab() {
     setLoading(false);
   }, []);
   useEffect(() => {
+    setLoading(true);
     load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
   }, [load]);
 
   return (
@@ -241,14 +243,16 @@ function LeaveTab() {
   const [open, setOpen] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
     const res = await fetch("/api/me/leave", { cache: "no-store" });
     const d = await res.json();
     setRequests(d.requests ?? []);
     setLoading(false);
   }, []);
   useEffect(() => {
+    setLoading(true);
     load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
   }, [load]);
 
   return (

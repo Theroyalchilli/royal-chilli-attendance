@@ -92,7 +92,6 @@ export default function AttendancePage() {
   }, []);
 
   const load = useCallback(async () => {
-    setLoading(true);
     const p = new URLSearchParams({ from, to });
     if (staffId) p.set("staff_id", staffId);
     const res = await fetch(`/api/admin/attendance?${p}`, { cache: "no-store" });
@@ -102,8 +101,13 @@ export default function AttendancePage() {
     setPending(data.pending ?? []);
     setLoading(false);
   }, [from, to, staffId]);
+  // Background refresh doesn't flip `loading` back on — an open edit modal
+  // holds its own snapshot of the row, so a poll behind it is harmless.
   useEffect(() => {
+    setLoading(true);
     load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
   }, [load]);
 
   // Once the targeted row has actually loaded, open it — clearing the target

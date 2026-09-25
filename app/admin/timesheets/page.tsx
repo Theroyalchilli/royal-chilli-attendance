@@ -34,13 +34,15 @@ export default function TimesheetsPage() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
     const res = await fetch(`/api/admin/timesheets?period_start=${weekStart}&period_end=${weekEnd}`, { cache: "no-store" });
     setList((await res.json()).list ?? []);
     setLoading(false);
   }, [weekStart, weekEnd]);
   useEffect(() => {
+    setLoading(true);
     load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
   }, [load]);
 
   async function generate() {

@@ -29,10 +29,14 @@ export default function MyPayslips() {
   const [open, setOpen] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch("/api/me/payslips", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((x) => setList(x.payslips ?? []))
-      .finally(() => setLoading(false));
+    const load = () =>
+      fetch("/api/me/payslips", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((x) => setList(x.payslips ?? []))
+        .finally(() => setLoading(false));
+    load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
   }, []);
 
   return (
