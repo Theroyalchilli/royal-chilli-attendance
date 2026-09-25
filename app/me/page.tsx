@@ -58,9 +58,15 @@ function WeekGlance({ data, color }: { data: Bar7[]; color: string }) {
           <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "#a3a3a3" }} interval={0} />
           <Tooltip
             cursor={false}
-            formatter={(_v, _n, p) => [p.payload.tooltip, ""]}
-            labelFormatter={() => ""}
-            contentStyle={{ fontSize: 12, padding: "4px 8px" }}
+            content={({ active, payload }) => {
+              if (!active || !payload?.length) return null;
+              const d = payload[0].payload as Bar7;
+              return (
+                <div className="rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs shadow-sm">
+                  {d.tooltip}
+                </div>
+              );
+            }}
           />
           <Bar dataKey="hours" radius={[3, 3, 0, 0]} minPointSize={2} isAnimationActive={false}>
             {data.map((d, i) => (
