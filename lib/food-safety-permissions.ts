@@ -2,24 +2,30 @@ import type { StaffRole } from "./types";
 
 // Deliberately not the same shape as the rest of this app's permissions —
 // see HANDOVER.md §2/§3: HR is excluded from this module entirely (food
-// safety is a kitchen operation, not a people one), Admin is view-only
-// (oversight, not hands-on logging), and sign-off is normally manager-only
-// but can be delegated to a specific senior employee via staff.can_signoff
-// (e.g. a head chef covering while the manager's away) — a per-person flag,
-// not a role.
+// safety is a kitchen operation, not a people one), and sign-off is
+// normally manager/admin-only but can be delegated to a specific senior
+// employee via staff.can_signoff (e.g. a head chef covering while the
+// manager's away) — a per-person flag, not a role.
+//
+// Admin was originally view-only on Tasks (oversight, not hands-on
+// logging), matching the doc. Changed on request to full parity with
+// Manager — same reasoning already applied to Config and Records: Admin
+// in a small operation is often also hands-on in the kitchen, and
+// blocking them from logging a check they're physically doing was pure
+// friction with no real separation-of-duties benefit.
 
 export function canViewFoodSafety(role: StaffRole): boolean {
   return role === "employee" || role === "manager" || role === "admin";
 }
 
 export function canLogFoodSafety(role: StaffRole): boolean {
-  return role === "employee" || role === "manager";
+  return role === "employee" || role === "manager" || role === "admin";
 }
 
 export function canSignoffFoodSafety(role: StaffRole, canSignoffFlag: boolean): boolean {
-  if (role === "manager") return true;
+  if (role === "manager" || role === "admin") return true;
   if (role === "employee") return canSignoffFlag;
-  return false; // admin (view-only) and hr (no access) never sign off
+  return false; // hr (no access) never signs off
 }
 
 // Trace (deliveries + approved-supplier register) — unlike Tasks, employees

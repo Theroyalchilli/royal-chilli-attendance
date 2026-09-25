@@ -154,9 +154,9 @@ export async function GET(req: NextRequest) {
 
   // Food safety summary — excluded for HR entirely (HANDOVER.md §2: it's a
   // kitchen operation, not a people one), so the field is just omitted for
-  // them rather than sent empty. Manager/admin both get it; the dashboard
-  // card is read-only either way, matching admin's view-only access to the
-  // module itself. Queries already ran above, in the same parallel batch.
+  // them rather than sent empty. Manager/admin both get it; the card itself
+  // is just a numbers tile (drill-through, not editable) regardless of role.
+  // Queries already ran above, in the same parallel batch.
   let foodSafety: {
     checks_done: number; checks_total: number; failures_today: number; signed_off: boolean; overdue_training: number;
   } | null = null;
