@@ -23,6 +23,7 @@ type Row = {
   photo_missing: boolean;
   notes: string | null;
   is_stuck: boolean;
+  rota: string | null;
 };
 type Staff = { id: number; name: string };
 type Pending = { staff_id: number; staff_name: string; work_date: string; shift_start: string; shift_end: string; status: ShiftStatus };
@@ -246,7 +247,7 @@ export default function AttendancePage() {
                     {dayRows.map((r) => (
                       <tr key={r.id} onClick={() => setEditing(r)} className="cursor-pointer border-t border-neutral-100 hover:bg-neutral-50">
                         <td className="px-3 py-2 font-medium">{r.staff_name}</td>
-                        <td className="px-3 py-2 text-neutral-400">—</td>
+                        <td className="px-3 py-2 text-neutral-500">{r.rota ?? <span className="text-neutral-400">—</span>}</td>
                         <td className="px-3 py-2">{clockTime(r.clock_in)}</td>
                         <td className="px-3 py-2">{r.clock_out ? clockTime(r.clock_out) : <span className={r.is_stuck ? "text-red-600" : "text-emerald-600"}>open</span>}</td>
                         <td className="px-3 py-2">{r.clock_out ? hm(r.net_work_seconds) : "—"}</td>

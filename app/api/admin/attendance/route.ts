@@ -67,10 +67,21 @@ export async function GET(req: NextRequest) {
     }))
     .filter((p) => p.status !== "Upcoming"); // today, not due to start yet — nothing to flag
 
+  // The shift(s) currently on the rota for each person/day — shown in the
+  // Rota column. Live rota, not the schedule snapshotted at clock-in, so it
+  // matches the Rota page after edits. Split shifts are joined.
+  const rotaByKey = new Map<string, string[]>();
+  for (const s of [...(shifts ?? [])].sort((a, b) => a.start_time.localeCompare(b.start_time))) {
+    const key = `${s.staff_id}-${s.shift_date}`;
+    if (!rotaByKey.has(key)) rotaByKey.set(key, []);
+    rotaByKey.get(key)!.push(`${s.start_time.slice(0, 5)} – ${s.end_time.slice(0, 5)}`);
+  }
+
   return NextResponse.json({
     rows: (rows ?? []).map((r) => ({
       ...r,
       staff_name: nameById.get(r.staff_id) ?? "?",
+      rota: rotaByKey.get(`${r.staff_id}-${r.work_date}`)?.join(", ") ?? null,
       is_stuck: !r.clock_out && !!r.clock_in && r.clock_in < staleBefore,
     })),
     staff: staff ?? [],
