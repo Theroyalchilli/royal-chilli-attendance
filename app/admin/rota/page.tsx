@@ -123,7 +123,7 @@ export default function RotaPage() {
           <table className="w-full min-w-[760px] text-sm">
             <thead className="bg-neutral-50 text-xs text-neutral-500">
               <tr>
-                <th className="px-3 py-2 text-left">Staff</th>
+                <th className="sticky left-0 z-10 bg-neutral-50 px-3 py-2 text-left shadow-[1px_0_0_#e5e5e5]">Staff</th>
                 {days.map((d, i) => (
                   <th key={d} className="px-2 py-2 text-center">
                     {DOW[i]}<br />
@@ -136,7 +136,7 @@ export default function RotaPage() {
             <tbody>
               {staff.map((s) => (
                 <tr key={s.id} className="border-t border-neutral-100">
-                  <td className="px-3 py-2 font-medium">{s.name}</td>
+                  <td className="sticky left-0 z-10 max-w-[140px] truncate bg-white px-3 py-2 font-medium shadow-[1px_0_0_#e5e5e5]" title={s.name}>{s.name}</td>
                   {days.map((date) => {
                     const sh = shiftAt.get(`${s.id}:${date}`) ?? null;
                     const lv = onLeave(s.id, date);
