@@ -28,8 +28,10 @@ type Row = {
 type Staff = { id: number; name: string };
 type Pending = { staff_id: number; staff_name: string; work_date: string; shift_start: string; shift_end: string; status: ShiftStatus };
 
+// Today's UK date — toISOString() is UTC, which in summer time still says
+// yesterday between midnight and 1am.
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 function addDays(iso: string, n: number) {
   const x = new Date(iso + "T12:00:00Z");
@@ -201,7 +203,6 @@ export default function AttendancePage() {
       {/* Row 3 — jump to any date */}
       <div className="mt-2 flex items-center gap-2 text-sm">
         <input type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5" />
-        <button onClick={() => setAnchor(todayISO())} className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs">Today</button>
       </div>
 
       {loading ? (
