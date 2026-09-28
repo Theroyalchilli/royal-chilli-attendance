@@ -6,6 +6,15 @@ import { getAttendanceSettings, localDateString } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
+// Usual patterns for the modal's defaults. Falls back to the single-slot
+// columns until POS migration 066 (rota_start_2/rota_end_2) has been run.
+async function loadActiveStaffRotas() {
+  const cols = "id, name, rota_start, rota_end, rota_working_days";
+  const r = await supabase.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1).order("name");
+  if (!r.error) return r;
+  return supabase.from("staff").select(cols).eq("active", 1).order("name");
+}
+
 function weekDays(weekStart: string): string[] {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart + "T12:00:00Z");
@@ -25,11 +34,7 @@ export async function GET(req: NextRequest) {
   const weekEnd = days[6];
 
   const [{ data: staff }, { data: shifts }, { data: leave }] = await Promise.all([
-    supabase
-      .from("staff")
-      .select("id, name, rota_start, rota_end, rota_working_days")
-      .eq("active", 1)
-      .order("name"),
+    loadActiveStaffRotas(),
     supabase
       .from("shifts")
       .select("id, staff_id, shift_date, start_time, end_time, position, notes, status")
@@ -53,19 +58,38 @@ export async function GET(req: NextRequest) {
   });
 }
 
-// POST { staff_id, shift_date, start_time, end_time, position?, notes? }
-// One shift per staff+date: updates the existing row if there is one.
+/** "HH:MM" → [startMin, endMin) with an overnight end rolled past 24h. */
+function span(start: string, end: string): [number, number] {
+  const m = (t: string) => {
+    const [h, mm] = t.slice(0, 5).split(":").map(Number);
+    return h * 60 + mm;
+  };
+  const s = m(start);
+  let e = m(end);
+  if (e <= s) e += 1440;
+  return [s, e];
+}
+const hhmm = (t: string) => t.slice(0, 5);
+
+// POST { id?, staff_id, shift_date, start_time, end_time, position?, notes? }
+// With `id`, edits that shift; without, adds another shift to the day — a
+// split-shift day (06:00–10:00 + 17:00–00:00) is just two rows. Shifts for
+// the same person and day may not overlap.
 export async function POST(req: NextRequest) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
 
   const b = await req.json();
+  const id = b.id ? Number(b.id) : null;
   const staffId = Number(b.staff_id);
   const date = String(b.shift_date || "");
   const start = String(b.start_time || "");
   const end = String(b.end_time || "");
   if (!staffId || !date || !start || !end) {
     return NextResponse.json({ error: "staff, date, start and end are required" }, { status: 400 });
+  }
+  if (hhmm(start) === hhmm(end)) {
+    return NextResponse.json({ error: "Start and end can't be the same time" }, { status: 400 });
   }
 
   const settings = await getAttendanceSettings();
@@ -74,13 +98,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Can't schedule a shift for a date that's already passed" }, { status: 400 });
   }
 
-  const { data: existing } = await supabase
+  const { data: sameDay } = await supabase
     .from("shifts")
-    .select("id")
+    .select("id, start_time, end_time")
     .eq("staff_id", staffId)
     .eq("shift_date", date)
-    .neq("status", "cancelled")
-    .maybeSingle();
+    .neq("status", "cancelled");
+
+  const [ns, ne] = span(start, end);
+  const clash = (sameDay ?? []).find((s) => {
+    if (s.id === id) return false;
+    const [os, oe] = span(s.start_time, s.end_time);
+    return ns < oe && os < ne;
+  });
+  if (clash) {
+    return NextResponse.json(
+      { error: `Overlaps their ${hhmm(clash.start_time)}–${hhmm(clash.end_time)} shift that day` },
+      { status: 400 },
+    );
+  }
 
   const row = {
     staff_id: staffId,
@@ -92,11 +128,14 @@ export async function POST(req: NextRequest) {
     status: "scheduled" as const,
   };
 
-  if (existing) {
-    const { error } = await supabase.from("shifts").update(row).eq("id", existing.id);
+  if (id) {
+    if (!(sameDay ?? []).some((s) => s.id === id)) {
+      return NextResponse.json({ error: "Shift not found" }, { status: 404 });
+    }
+    const { error } = await supabase.from("shifts").update(row).eq("id", id);
     if (error) return NextResponse.json({ error: "Update failed" }, { status: 500 });
-    await audit(g.session.id, "rota_shift_update", existing.id, null, row);
-    return NextResponse.json({ id: existing.id });
+    await audit(g.session.id, "rota_shift_update", id, null, row);
+    return NextResponse.json({ id });
   }
 
   const { data: created, error } = await supabase

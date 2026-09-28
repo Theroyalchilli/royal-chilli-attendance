@@ -28,10 +28,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "That week is in the past — Rota is read-only there" }, { status: 400 });
   }
 
-  const { data: staff } = await supabase
-    .from("staff")
-    .select("id, rota_start, rota_end, rota_working_days")
-    .eq("active", 1);
+  // second slot = split-shift pattern (POS migration 066); fall back without it
+  const cols = "id, rota_start, rota_end, rota_working_days";
+  const withSecond = await supabase.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1);
+  const staff = (withSecond.error ? (await supabase.from("staff").select(cols).eq("active", 1)).data : withSecond.data) as
+    | { id: number; rota_start: string | null; rota_end: string | null; rota_start_2?: string | null; rota_end_2?: string | null; rota_working_days: number[] | null }[]
+    | null;
 
   // never overwrite an existing shift for a staff+date
   const { data: existing } = await supabase
@@ -86,7 +88,7 @@ export async function POST(req: NextRequest) {
       });
     }
   } else {
-    // from each staff member's default rota
+    // from each staff member's default rota (one or two slots a day)
     for (const s of staff ?? []) {
       if (!s.rota_start || !s.rota_end) continue;
       const working: number[] = s.rota_working_days ?? [1, 2, 3, 4, 5];
@@ -95,14 +97,18 @@ export async function POST(req: NextRequest) {
         const wd = localIsoWeekday(new Date(Date.UTC(y, m - 1, d, 12)), settings.timezone);
         if (!working.includes(wd)) continue;
         if (taken.has(`${s.id}:${date}`) || onLeave(s.id, date)) continue;
-        inserts.push({
-          staff_id: s.id,
-          shift_date: date,
-          start_time: hhmm(s.rota_start)!,
-          end_time: hhmm(s.rota_end)!,
-          status: "scheduled",
-          created_by: g.session.id,
-        });
+        const slots: [string, string][] = [[s.rota_start, s.rota_end]];
+        if (s.rota_start_2 && s.rota_end_2) slots.push([s.rota_start_2, s.rota_end_2]);
+        for (const [start, end] of slots) {
+          inserts.push({
+            staff_id: s.id,
+            shift_date: date,
+            start_time: hhmm(start)!,
+            end_time: hhmm(end)!,
+            status: "scheduled",
+            created_by: g.session.id,
+          });
+        }
       }
     }
   }

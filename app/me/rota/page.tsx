@@ -3,11 +3,25 @@
 import { useCallback, useEffect, useState } from "react";
 
 type Shift = { shift_date: string; start_time: string; end_time: string };
-type Rota = { rota_start: string | null; rota_end: string | null; rota_working_days: number[] | null } | null;
+type Rota = {
+  rota_start: string | null;
+  rota_end: string | null;
+  rota_start_2?: string | null;
+  rota_end_2?: string | null;
+  rota_working_days: number[] | null;
+} | null;
 type Leave = { start_date: string; end_date: string; leave_type: string };
 
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const hm = (t: string) => t.slice(0, 5);
+/** "HH:MM" pair → minutes, rolling past midnight when end <= start */
+function mins(start: string, end: string) {
+  const m = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  let d = m(end) - m(start);
+  if (d <= 0) d += 1440;
+  return d;
+}
+const dur = (m: number) => `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}`;
 
 function mondayOf(d = new Date()) {
   const x = new Date(d);
@@ -44,12 +58,14 @@ export default function MyRota() {
     return () => clearInterval(t);
   }, [load]);
 
-  const shiftFor = (date: string) => shifts.find((s) => s.shift_date === date);
+  const shiftsFor = (date: string) => shifts.filter((s) => s.shift_date === date);
   const onLeave = (date: string) => leave.some((l) => date >= l.start_date && date <= l.end_date);
-  const rotaFor = (i: number) =>
-    rota?.rota_start && rota.rota_end && (rota.rota_working_days ?? [1, 2, 3, 4, 5]).includes(i + 1)
-      ? `${hm(rota.rota_start)}–${hm(rota.rota_end)}`
-      : null;
+  const rotaFor = (i: number) => {
+    if (!rota?.rota_start || !rota.rota_end || !(rota.rota_working_days ?? [1, 2, 3, 4, 5]).includes(i + 1)) return null;
+    const slots = [`${hm(rota.rota_start)}–${hm(rota.rota_end)}`];
+    if (rota.rota_start_2 && rota.rota_end_2) slots.push(`${hm(rota.rota_start_2)}–${hm(rota.rota_end_2)}`);
+    return slots.join(" & ");
+  };
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -70,7 +86,8 @@ export default function MyRota() {
       ) : (
         <div className="mt-4 divide-y divide-neutral-100 rounded-xl border border-neutral-200 bg-white">
           {days.map((date, i) => {
-            const s = shiftFor(date);
+            const day = shiftsFor(date);
+            const total = day.reduce((sum, s) => sum + mins(s.start_time, s.end_time), 0);
             const lv = onLeave(date);
             const fallback = rotaFor(i);
             return (
@@ -81,8 +98,15 @@ export default function MyRota() {
                 </span>
                 {lv ? (
                   <span className="rounded-md bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700">On leave</span>
-                ) : s ? (
-                  <span className="rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">{hm(s.start_time)}–{hm(s.end_time)}</span>
+                ) : day.length > 0 ? (
+                  <span className="flex flex-col items-end gap-1">
+                    {day.map((s) => (
+                      <span key={s.start_time} className="rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">
+                        {hm(s.start_time)}–{hm(s.end_time)}
+                      </span>
+                    ))}
+                    {day.length > 1 && <span className="text-[11px] text-neutral-400">Total {dur(total)}</span>}
+                  </span>
                 ) : fallback ? (
                   <span className="text-xs text-neutral-400">{fallback} (usual)</span>
                 ) : (

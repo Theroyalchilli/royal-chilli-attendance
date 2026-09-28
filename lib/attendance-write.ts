@@ -26,8 +26,17 @@ export type DerivedPatch = {
   is_overnight: boolean;
 };
 
+/** UK rest-break rule: the rota break is only owed on a session over 6 hours. */
+export const BREAK_MIN_SESSION_SECONDS = 6 * 3600;
+
 export function recompute(inp: RecomputeInput, settings: AttendanceSettings): { patch: DerivedPatch; result: ShiftResult } {
-  const breakMinutes = inp.breakOverrideMinutes ?? inp.scheduleBreakMinutes;
+  // A manager's per-day override always wins. Otherwise the rota break only
+  // comes off a session longer than 6h — so on a split-shift day the short
+  // 06:00–10:00 half keeps all its hours and only the long half loses the break.
+  const until = inp.clockOut ? new Date(inp.clockOut) : (inp.now ?? new Date());
+  const sessionSeconds = inp.clockIn ? (until.getTime() - new Date(inp.clockIn).getTime()) / 1000 : 0;
+  const breakMinutes =
+    inp.breakOverrideMinutes ?? (sessionSeconds > BREAK_MIN_SESSION_SECONDS ? inp.scheduleBreakMinutes : 0);
   const otThreshold =
     settings.overtimeEnabled && settings.overtimeDailyMinutes > 0
       ? settings.overtimeDailyMinutes * 60

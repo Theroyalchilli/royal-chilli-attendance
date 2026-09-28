@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/supabase";
 import { requireManager } from "@/lib/guard";
 import { getAttendanceSettings, localDateString } from "@/lib/settings";
-import { resolveScheduleFor, type StaffRota } from "@/lib/rota";
+import { loadStaffRota, resolveScheduleFor } from "@/lib/rota";
 import { recompute, audit } from "@/lib/attendance-write";
 import { classifyShiftStatus } from "@/lib/shift-status";
 
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   if (to) q = q.lte("work_date", to);
   if (staffId) q = q.eq("staff_id", Number(staffId));
 
-  let shiftsQ = supabase.from("shifts").select("staff_id, shift_date, start_time, end_time").neq("status", "cancelled");
+  let shiftsQ = supabase.from("shifts").select("id, staff_id, shift_date, start_time, end_time").neq("status", "cancelled");
   if (from) shiftsQ = shiftsQ.gte("shift_date", from);
   if (to) shiftsQ = shiftsQ.lte("shift_date", to);
   if (staffId) shiftsQ = shiftsQ.eq("staff_id", Number(staffId));
@@ -51,9 +51,22 @@ export async function GET(req: NextRequest) {
   // have no attendance id to edit — the UI offers "Clock in now" instead.
   // Staff with a stale open shift from another day show "Stuck" here even
   // though today's own shift has nothing recorded — that's the real story.
+  // Split shifts: a shift counts as attended by a row linked to it
+  // (shift_id). A person/day with a single shift also accepts an unlinked
+  // row (manual entries, rows from before shifts were linked).
   const attendedKey = new Set((rows ?? []).map((r) => `${r.staff_id}-${r.work_date}`));
+  const attendedShift = new Set((rows ?? []).filter((r) => r.shift_id != null).map((r) => r.shift_id));
+  const shiftsPerDay = new Map<string, number>();
+  for (const s of shifts ?? []) {
+    const k = `${s.staff_id}-${s.shift_date}`;
+    shiftsPerDay.set(k, (shiftsPerDay.get(k) ?? 0) + 1);
+  }
+  const attended = (s: { id: number; staff_id: number; shift_date: string }) => {
+    const k = `${s.staff_id}-${s.shift_date}`;
+    return attendedShift.has(s.id) || (shiftsPerDay.get(k) === 1 && attendedKey.has(k));
+  };
   const pending = (shifts ?? [])
-    .filter((s) => s.shift_date <= today && !attendedKey.has(`${s.staff_id}-${s.shift_date}`))
+    .filter((s) => s.shift_date <= today && !attended(s))
     .map((s) => ({
       staff_id: s.staff_id,
       staff_name: nameById.get(s.staff_id) ?? "?",
@@ -104,13 +117,9 @@ export async function POST(req: NextRequest) {
   }
 
   const settings = await getAttendanceSettings();
-  const { data: staff } = await supabase
-    .from("staff")
-    .select("rota_start, rota_end, rota_working_days, rota_break_minutes, rota_grace_minutes")
-    .eq("id", staffId)
-    .maybeSingle();
-  const rota = (staff ?? {}) as StaffRota;
-  const sched = await resolveScheduleFor(staffId, workDate, rota, settings);
+  const rota = await loadStaffRota(staffId);
+  // split-shift day: the entry belongs to the shift nearest its clock-in
+  const sched = await resolveScheduleFor(staffId, workDate, rota, settings, new Date(clockIn));
 
   const { patch } = recompute(
     {

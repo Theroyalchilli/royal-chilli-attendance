@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/supabase";
 import { getSessionFromRequest } from "@/lib/auth";
+import { loadStaffRota } from "@/lib/rota";
 
 export const dynamic = "force-dynamic";
 
@@ -22,19 +23,16 @@ export async function GET(req: NextRequest) {
   if (!weekStart) return NextResponse.json({ error: "week_start required" }, { status: 400 });
   const days = weekDays(weekStart);
 
-  const [{ data: shifts }, { data: me }, { data: leave }] = await Promise.all([
+  const [{ data: shifts }, me, { data: leave }] = await Promise.all([
     supabase
       .from("shifts")
       .select("shift_date, start_time, end_time")
+      .order("start_time")
       .eq("staff_id", session.id)
       .gte("shift_date", days[0])
       .lte("shift_date", days[6])
       .neq("status", "cancelled"),
-    supabase
-      .from("staff")
-      .select("rota_start, rota_end, rota_working_days")
-      .eq("id", session.id)
-      .maybeSingle(),
+    loadStaffRota(session.id),
     supabase
       .from("leave_requests")
       .select("start_date, end_date, leave_type")
@@ -47,7 +45,13 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     days,
     shifts: shifts ?? [],
-    rota: me ?? null,
+    rota: {
+      rota_start: me.rota_start,
+      rota_end: me.rota_end,
+      rota_start_2: me.rota_start_2 ?? null,
+      rota_end_2: me.rota_end_2 ?? null,
+      rota_working_days: me.rota_working_days,
+    },
     leave: leave ?? [],
   });
 }

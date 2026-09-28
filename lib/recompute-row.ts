@@ -1,6 +1,6 @@
 import supabase from "./supabase";
 import { getAttendanceSettings } from "./settings";
-import { resolveScheduleFor, type StaffRota } from "./rota";
+import { loadStaffRota, resolveScheduleFor } from "./rota";
 import { recompute } from "./attendance-write";
 
 /**
@@ -13,20 +13,8 @@ export async function recomputeAndSave(attendanceId: number): Promise<Record<str
   const { data: row } = await supabase.from("attendance").select("*").eq("id", attendanceId).maybeSingle();
   if (!row) return null;
 
-  const { data: staff } = await supabase
-    .from("staff")
-    .select("rota_start, rota_end, rota_working_days, rota_break_minutes, rota_grace_minutes")
-    .eq("id", row.staff_id)
-    .maybeSingle();
-
   const settings = await getAttendanceSettings();
-  const rota = (staff ?? {
-    rota_start: null,
-    rota_end: null,
-    rota_working_days: null,
-    rota_break_minutes: null,
-    rota_grace_minutes: null,
-  }) as StaffRota;
+  const rota = await loadStaffRota(row.staff_id);
 
   const sched = await resolveScheduleFor(row.staff_id, row.work_date, rota, settings);
 

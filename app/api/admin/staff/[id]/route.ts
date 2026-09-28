@@ -16,6 +16,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   for (const [key, coerce] of [
     ["rota_start", (v: unknown) => (v ? String(v) : null)],
     ["rota_end", (v: unknown) => (v ? String(v) : null)],
+    ["rota_start_2", (v: unknown) => (v ? String(v) : null)],
+    ["rota_end_2", (v: unknown) => (v ? String(v) : null)],
     ["rota_break_minutes", (v: unknown) => (v == null ? null : Math.max(0, Number(v)))],
     ["rota_grace_minutes", (v: unknown) => (v == null ? null : Math.max(0, Number(v)))],
   ] as const) {
@@ -27,12 +29,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .filter((n: number) => n >= 1 && n <= 7);
   }
 
+  // a second slot needs both ends (and a first slot to go with it)
+  if (("rota_start_2" in patch) !== ("rota_end_2" in patch) || (!patch.rota_start_2 !== !patch.rota_end_2)) {
+    return NextResponse.json({ error: "Second shift needs both a start and an end" }, { status: 400 });
+  }
+
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
   const { error } = await supabase.from("staff").update(patch).eq("id", staffId);
-  if (error) return NextResponse.json({ error: "Update failed" }, { status: 500 });
+  if (error) {
+    const needsMigration = "rota_start_2" in patch && /rota_start_2|rota_end_2/.test(error.message);
+    return NextResponse.json(
+      { error: needsMigration ? "Second shift slot needs database migration 066 — ask your admin to run it" : "Update failed" },
+      { status: 500 },
+    );
+  }
 
   await audit(session.id, "staff_attendance_update", staffId, null, patch);
   return NextResponse.json({ success: true });

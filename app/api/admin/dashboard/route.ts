@@ -53,8 +53,8 @@ export async function GET(req: NextRequest) {
     fsTrainingRecords,
   ] = await Promise.all([
     supabase.from("staff").select("id, name, role").eq("active", 1),
-    supabase.from("shifts").select("staff_id, start_time, end_time, position").eq("shift_date", today).neq("status", "cancelled"),
-    supabase.from("attendance").select("staff_id, clock_in, clock_out, late_seconds").eq("work_date", today),
+    supabase.from("shifts").select("id, staff_id, start_time, end_time, position").eq("shift_date", today).neq("status", "cancelled"),
+    supabase.from("attendance").select("staff_id, shift_id, clock_in, clock_out, late_seconds").eq("work_date", today),
     supabase.from("attendance").select("id, staff_id, clock_in").is("clock_out", null).not("clock_in", "is", null),
     supabase.from("leave_requests").select("staff_id").eq("status", "approved").lte("start_date", today).gte("end_date", today),
     supabase
@@ -86,8 +86,17 @@ export async function GET(req: NextRequest) {
   // clock-out, not "currently working" — never let it read as "On Shift".
   const openSet = new Set((openRows ?? []).filter((r) => r.clock_in >= staleBefore).map((r) => r.staff_id));
   const staleOpenSet = new Set((openRows ?? []).filter((r) => r.clock_in < staleBefore).map((r) => r.staff_id));
-  const clockedOutToday = new Set((attToday ?? []).filter((r) => r.clock_out).map((r) => r.staff_id));
   const nowHM = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
+  // Split shifts: each shift's status comes from the attendance rows linked
+  // to it (shift_id, set at clock-in), so "morning Done" doesn't make the
+  // evening shift read Done too. Someone with a single shift today falls back
+  // to any of their rows (older rows / manual entries may have no shift_id).
+  const shiftCount = new Map<number, number>();
+  for (const s of shiftsToday ?? []) shiftCount.set(s.staff_id, (shiftCount.get(s.staff_id) ?? 0) + 1);
+  const rowsFor = (s: { id: number; staff_id: number }) =>
+    (attToday ?? []).filter((r) =>
+      r.staff_id === s.staff_id && (r.shift_id === s.id || (shiftCount.get(s.staff_id) === 1 && r.shift_id == null)),
+    );
   const todaysShifts = (shiftsToday ?? [])
     .map((s) => ({
       staff_name: nameById.get(s.staff_id) ?? "?",
@@ -96,7 +105,8 @@ export async function GET(req: NextRequest) {
       end: s.end_time.slice(0, 5),
       status: classifyShiftStatus({
         workDate: today, today, startHM: s.start_time.slice(0, 5), nowHM,
-        hasOpenShift: openSet.has(s.staff_id), hasClosedShift: clockedOutToday.has(s.staff_id),
+        hasOpenShift: openSet.has(s.staff_id) && rowsFor(s).some((r) => r.clock_in && !r.clock_out),
+        hasClosedShift: rowsFor(s).some((r) => r.clock_out),
         hasStaleOpenShift: staleOpenSet.has(s.staff_id),
       }),
     }))

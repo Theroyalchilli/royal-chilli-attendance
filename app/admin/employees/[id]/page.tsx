@@ -14,6 +14,8 @@ type Staff = {
   active: number;
   rota_start: string | null;
   rota_end: string | null;
+  rota_start_2?: string | null;
+  rota_end_2?: string | null;
   rota_working_days: number[] | null;
   rota_break_minutes: number | null;
   rota_grace_minutes: number | null;
@@ -108,6 +110,7 @@ export default function EmployeeProfilePage() {
   const [loading, setLoading] = useState(true);
   const [editingRow, setEditingRow] = useState<Row | null>(null);
   const [adding, setAdding] = useState(false);
+  const [editingRota, setEditingRota] = useState(false);
   const [corrBusy, setCorrBusy] = useState<number | null>(null);
   const [tsBusy, setTsBusy] = useState(false);
 
@@ -171,8 +174,11 @@ export default function EmployeeProfilePage() {
         </p>
         <p className="mt-1 text-xs text-neutral-400">
           {staff.rota_start && staff.rota_end
-            ? `Rota: ${staff.rota_start.slice(0, 5)}–${staff.rota_end.slice(0, 5)} · ${(staff.rota_working_days ?? []).map((i) => DAYS[i - 1]).join(" ")}`
-            : "No default rota set"}
+            ? `Usual rota: ${staff.rota_start.slice(0, 5)}–${staff.rota_end.slice(0, 5)}${
+                staff.rota_start_2 && staff.rota_end_2 ? ` & ${staff.rota_start_2.slice(0, 5)}–${staff.rota_end_2.slice(0, 5)}` : ""
+              } · ${(staff.rota_working_days ?? []).map((i) => DAYS[i - 1]).join(" ")}`
+            : "No usual rota set"}{" "}
+          <button onClick={() => setEditingRota(true)} className="text-blue-600 hover:underline">Edit</button>
         </p>
       </div>
 
@@ -354,6 +360,7 @@ export default function EmployeeProfilePage() {
       </section>
 
       {editingRow && <AttendanceEditModal row={editingRow} onClose={() => setEditingRow(null)} onSaved={() => { setEditingRow(null); load(); }} />}
+      {editingRota && <UsualRotaModal staff={staff} onClose={() => setEditingRota(false)} onSaved={() => { setEditingRota(false); load(); }} />}
       {adding && <ManualEntryModal staffId={Number(staffId)} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />}
     </div>
   );
@@ -520,3 +527,94 @@ function ManualEntryModal({ staffId, onClose, onSaved }: { staffId: number; onCl
   );
 }
 
+
+/** The usual weekly pattern "Fill from defaults" uses — one slot, or two for a split shift. */
+function UsualRotaModal({ staff, onClose, onSaved }: { staff: Staff; onClose: () => void; onSaved: () => void }) {
+  const t = (v: string | null | undefined) => v?.slice(0, 5) ?? "";
+  const [start, setStart] = useState(t(staff.rota_start));
+  const [end, setEnd] = useState(t(staff.rota_end));
+  const [split, setSplit] = useState(!!(staff.rota_start_2 && staff.rota_end_2));
+  const [start2, setStart2] = useState(t(staff.rota_start_2) || "17:00");
+  const [end2, setEnd2] = useState(t(staff.rota_end_2) || "00:00");
+  const [days, setDays] = useState<number[]>(staff.rota_working_days ?? [1, 2, 3, 4, 5]);
+  const [breakMin, setBreakMin] = useState(String(staff.rota_break_minutes ?? 0));
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function save() {
+    if ((start && !end) || (!start && end)) return setErr("Give the shift both a start and an end");
+    if (split && (!start || !start2 || !end2)) return setErr("A split shift needs both shifts filled in");
+    setBusy(true);
+    setErr("");
+    const body: Record<string, unknown> = {
+      rota_start: start || null,
+      rota_end: end || null,
+      rota_working_days: days,
+      rota_break_minutes: Number(breakMin) || 0,
+    };
+    // only touch the second-slot columns when they're in use or being cleared
+    if (split || staff.rota_start_2 || staff.rota_end_2) {
+      body.rota_start_2 = split ? start2 : null;
+      body.rota_end_2 = split ? end2 : null;
+    }
+    const res = await fetch(`/api/admin/staff/${staff.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      return setErr(d.error || "Couldn't save");
+    }
+    onSaved();
+  }
+
+  const input = "mt-1 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900";
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-5">
+        <h2 className="font-semibold">Usual rota — {staff.name}</h2>
+        <p className="mt-1 text-xs text-neutral-500">Used by &ldquo;Fill from defaults&rdquo; on the Rota page, and on days with no shift set.</p>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <label className="text-xs text-neutral-500">{split ? "Shift 1 start" : "Start"}<input type="time" value={start} onChange={(e) => setStart(e.target.value)} className={input} /></label>
+          <label className="text-xs text-neutral-500">{split ? "Shift 1 end" : "End"}<input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className={input} /></label>
+        </div>
+        <label className="mt-3 flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={split} onChange={(e) => setSplit(e.target.checked)} />
+          Split shift (two shifts a day)
+        </label>
+        {split && (
+          <div className="mt-2 grid grid-cols-2 gap-3">
+            <label className="text-xs text-neutral-500">Shift 2 start<input type="time" value={start2} onChange={(e) => setStart2(e.target.value)} className={input} /></label>
+            <label className="text-xs text-neutral-500">Shift 2 end<input type="time" value={end2} onChange={(e) => setEnd2(e.target.value)} className={input} /></label>
+          </div>
+        )}
+        <p className="mt-1 text-xs text-neutral-400">An end at or before the start runs past midnight (e.g. 17:00–00:00).</p>
+        <div className="mt-3 flex flex-wrap gap-1">
+          {DAYS.map((d, i) => {
+            const on = days.includes(i + 1);
+            return (
+              <button
+                key={d}
+                onClick={() => setDays(on ? days.filter((x) => x !== i + 1) : [...days, i + 1].sort())}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium ${on ? "bg-brand text-white" : "bg-neutral-100 text-neutral-500"}`}
+              >
+                {d}
+              </button>
+            );
+          })}
+        </div>
+        <label className="mt-3 block text-xs text-neutral-500">
+          Unpaid break (minutes) — only taken off a shift longer than 6 hours
+          <input type="number" min={0} value={breakMin} onChange={(e) => setBreakMin(e.target.value)} className={input} />
+        </label>
+        {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
+        <div className="mt-5 flex gap-3">
+          <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
+          <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">{busy ? "Saving…" : "Save"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}

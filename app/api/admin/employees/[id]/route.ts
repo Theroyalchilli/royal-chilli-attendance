@@ -50,6 +50,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     .eq("id", staffId)
     .maybeSingle();
   if (staffErr || !staff) return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+  // split-shift second slot (POS migration 066) — skipped if not migrated yet
+  const second = await supabase.from("staff").select("rota_start_2, rota_end_2").eq("id", staffId).maybeSingle();
+  if (!second.error && second.data) Object.assign(staff, second.data);
 
   const [{ data: attendance }, { data: shifts }, { data: corrections }, { data: leave }, { data: entries }] =
     await Promise.all([

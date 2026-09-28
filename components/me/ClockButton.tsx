@@ -4,7 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import { captureSelfie, getPosition } from "@/lib/selfie";
 import { hm } from "@/lib/format";
 
-type Status = { clocked_in: boolean; since: string | null; geofence: boolean };
+type Status = {
+  clocked_in: boolean;
+  since: string | null;
+  /** split shift: still clocked in from an earlier shift that's long over */
+  forgot: { closes_at: string; next_start: string } | null;
+  geofence: boolean;
+};
 type Phase = "idle" | "locating" | "capturing" | "sending" | "done" | "error";
 
 export default function ClockButton() {
@@ -50,9 +56,16 @@ export default function ClockButton() {
         return;
       }
       setPhase("done");
-      setMsg(data.action === "in" ? `Clocked in at ${new Date(data.time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : `Clocked out — ${hm(data.net_work_seconds)} today`);
+      const at = new Date(data.time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+      setMsg(
+        data.action === "in"
+          ? data.auto_closed_at
+            ? `You didn't clock out earlier — we've set it to ${data.auto_closed_at} for your manager to check. Clocked in at ${at}.`
+            : `Clocked in at ${at}`
+          : `Clocked out — ${hm(data.net_work_seconds)} this shift`,
+      );
       load();
-      setTimeout(() => setPhase("idle"), 4000);
+      setTimeout(() => setPhase("idle"), data.auto_closed_at ? 10000 : 4000);
     } catch {
       setPhase("error");
       setMsg("No connection — try again");
@@ -81,6 +94,12 @@ export default function ClockButton() {
 
       {phase === "done" && <p className="mt-2 text-center text-sm font-medium text-emerald-600">{msg}</p>}
       {phase === "error" && <p className="mt-2 text-center text-sm text-red-600">{msg}</p>}
+      {phase === "idle" && status.forgot && (
+        <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-center text-sm text-amber-800">
+          ⚠️ You didn&apos;t clock out after your last shift. Tap Clock In for your {status.forgot.next_start} shift — the
+          last one will be set to {status.forgot.closes_at} for your manager to check.
+        </p>
+      )}
       {phase === "idle" && clockedIn && status.since && (
         <p className="mt-2 text-center text-sm text-neutral-500">
           Clocked in since {new Date(status.since).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}

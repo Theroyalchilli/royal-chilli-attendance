@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-type Staff = { id: number; name: string; rota_start: string | null; rota_end: string | null };
+type Staff = {
+  id: number;
+  name: string;
+  rota_start: string | null;
+  rota_end: string | null;
+  rota_start_2?: string | null;
+  rota_end_2?: string | null;
+};
 type Shift = { id: number; staff_id: number; shift_date: string; start_time: string; end_time: string };
 type Leave = { staff_id: number; start_date: string; end_date: string; leave_type: string };
 
@@ -31,7 +38,8 @@ export default function RotaPage() {
   const [leave, setLeave] = useState<Leave[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [cell, setCell] = useState<{ staff: Staff; date: string; shift: Shift | null } | null>(null);
+  // shift = null → adding another shift to that day
+  const [cell, setCell] = useState<{ staff: Staff; date: string; shift: Shift | null; count: number } | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/admin/rota?week_start=${weekStart}`, { cache: "no-store" });
@@ -51,9 +59,14 @@ export default function RotaPage() {
     return () => clearInterval(t);
   }, [load]);
 
-  const shiftAt = useMemo(() => {
-    const m = new Map<string, Shift>();
-    for (const s of shifts) m.set(`${s.staff_id}:${s.shift_date}`, s);
+  // every shift for a person/day, earliest first — a split-shift day has two
+  const shiftsAt = useMemo(() => {
+    const m = new Map<string, Shift[]>();
+    for (const s of [...shifts].sort((a, b) => a.start_time.localeCompare(b.start_time))) {
+      const k = `${s.staff_id}:${s.shift_date}`;
+      if (!m.has(k)) m.set(k, []);
+      m.get(k)!.push(s);
+    }
     return m;
   }, [shifts]);
 
@@ -113,7 +126,7 @@ export default function RotaPage() {
       <p className="mt-1 text-xs text-neutral-400">
         {weekIsPast
           ? "This week is in the past — read-only history. Fix what actually happened in Attendance instead."
-          : "Click a cell to set or clear a shift. Neither button overwrites shifts you've already set."}
+          : "Click a shift to change or clear it, or + to add one — add two for a split shift. Neither button overwrites shifts you've already set."}
       </p>
 
       {loading ? (
@@ -138,23 +151,39 @@ export default function RotaPage() {
                 <tr key={s.id} className="border-t border-neutral-100">
                   <td className="sticky left-0 z-10 max-w-[140px] truncate bg-white px-3 py-2 font-medium shadow-[1px_0_0_#e5e5e5]" title={s.name}>{s.name}</td>
                   {days.map((date) => {
-                    const sh = shiftAt.get(`${s.id}:${date}`) ?? null;
+                    const day = shiftsAt.get(`${s.id}:${date}`) ?? [];
                     const lv = onLeave(s.id, date);
                     const isPast = date < today;
-                    const label = lv ? "Leave" : sh ? `${hhmm(sh.start_time)}–${hhmm(sh.end_time)}` : "off";
-                    const tone = lv ? "bg-purple-100 text-purple-700" : sh ? "bg-emerald-100 text-emerald-800" : "text-neutral-300";
+                    const chip = "w-full rounded-md px-1 py-1.5 text-xs";
                     return (
-                      <td key={date} className="p-1 text-center">
-                        {isPast ? (
-                          <div className={`w-full cursor-default rounded-md px-1 py-2 text-xs opacity-60 ${tone}`}>{label}</div>
-                        ) : (
-                          <button
-                            onClick={() => setCell({ staff: s, date, shift: sh })}
-                            className={`w-full rounded-md px-1 py-2 text-xs transition ${tone} ${sh ? "hover:bg-emerald-200" : lv ? "" : "hover:bg-neutral-100"}`}
-                          >
-                            {label}
-                          </button>
-                        )}
+                      <td key={date} className="p-1 text-center align-top">
+                        <div className="flex flex-col gap-1">
+                          {lv && day.length === 0 && <div className={`${chip} bg-purple-100 text-purple-700 ${isPast ? "opacity-60" : ""}`}>Leave</div>}
+                          {day.map((sh) =>
+                            isPast ? (
+                              <div key={sh.id} className={`${chip} cursor-default bg-emerald-100 text-emerald-800 opacity-60`}>{hhmm(sh.start_time)}–{hhmm(sh.end_time)}</div>
+                            ) : (
+                              <button
+                                key={sh.id}
+                                onClick={() => setCell({ staff: s, date, shift: sh, count: day.length })}
+                                className={`${chip} bg-emerald-100 text-emerald-800 transition hover:bg-emerald-200`}
+                              >
+                                {hhmm(sh.start_time)}–{hhmm(sh.end_time)}
+                              </button>
+                            ),
+                          )}
+                          {isPast
+                            ? day.length === 0 && !lv && <div className={`${chip} cursor-default text-neutral-300 opacity-60`}>off</div>
+                            : !lv && (
+                                <button
+                                  onClick={() => setCell({ staff: s, date, shift: null, count: day.length })}
+                                  title={day.length ? "Add another shift (split shift)" : "Add a shift"}
+                                  className={`${chip} text-neutral-300 transition hover:bg-neutral-100 hover:text-neutral-500`}
+                                >
+                                  {day.length ? "+" : "off"}
+                                </button>
+                              )}
+                        </div>
                       </td>
                     );
                   })}
@@ -173,18 +202,26 @@ export default function RotaPage() {
           staffName={cell.staff.name}
           date={cell.date}
           shift={cell.shift}
-          defaults={{ start: cell.staff.rota_start, end: cell.staff.rota_end }}
+          defaults={
+            // second shift of the day → the usual pattern's second slot, if any
+            cell.count > 0
+              ? { start: cell.staff.rota_start_2 ?? "17:00", end: cell.staff.rota_end_2 ?? "00:00" }
+              : { start: cell.staff.rota_start, end: cell.staff.rota_end }
+          }
           onClose={() => setCell(null)}
           onDone={() => {
             setCell(null);
             load();
           }}
           onSave={async (start, end) => {
-            await fetch("/api/admin/rota", {
+            const res = await fetch("/api/admin/rota", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ staff_id: cell.staff.id, shift_date: cell.date, start_time: start, end_time: end }),
+              body: JSON.stringify({ id: cell.shift?.id, staff_id: cell.staff.id, shift_date: cell.date, start_time: start, end_time: end }),
             });
+            if (res.ok) return null;
+            const d = await res.json().catch(() => ({}));
+            return d.error || "Couldn't save that shift";
           }}
           onClear={async () => {
             if (cell.shift) await fetch(`/api/admin/rota/${cell.shift.id}`, { method: "DELETE" });
@@ -211,22 +248,29 @@ function ShiftModal({
   defaults: { start: string | null; end: string | null };
   onClose: () => void;
   onDone: () => void;
-  onSave: (start: string, end: string) => Promise<void>;
+  /** resolves to an error message, or null when saved */
+  onSave: (start: string, end: string) => Promise<string | null>;
   onClear: () => Promise<void>;
 }) {
   const [start, setStart] = useState(shift ? shift.start_time.slice(0, 5) : defaults.start?.slice(0, 5) ?? "09:00");
   const [end, setEnd] = useState(shift ? shift.end_time.slice(0, 5) : defaults.end?.slice(0, 5) ?? "17:00");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
       <div className="w-full max-w-xs rounded-2xl bg-white p-5">
         <h2 className="font-semibold">{staffName}</h2>
-        <p className="text-xs text-neutral-500">{new Date(date + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })}</p>
+        <p className="text-xs text-neutral-500">
+          {new Date(date + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })}
+          {!shift && " · new shift"}
+        </p>
         <div className="mt-4 grid grid-cols-2 gap-3">
           <label className="text-xs text-neutral-500">Start<input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900" /></label>
           <label className="text-xs text-neutral-500">End<input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900" /></label>
         </div>
+        <p className="mt-2 text-xs text-neutral-400">An end at or before the start runs past midnight (e.g. 17:00–00:00).</p>
+        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
         <div className="mt-5 flex gap-2">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
           {shift && (
@@ -239,7 +283,15 @@ function ShiftModal({
             </button>
           )}
           <button
-            onClick={async () => { setBusy(true); await onSave(start, end); onDone(); }}
+            onClick={async () => {
+              setBusy(true);
+              setError("");
+              const err = await onSave(start, end);
+              if (err) {
+                setError(err);
+                setBusy(false);
+              } else onDone();
+            }}
             disabled={busy}
             className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50"
           >
