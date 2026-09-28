@@ -4,12 +4,14 @@ import { assertCron } from "@/lib/cron";
 import { getAttendanceSettings, localDateString } from "@/lib/settings";
 import { dueShiftAlerts, type AlertKind } from "@/lib/shift-alerts";
 import { notify, notifyManagers } from "@/lib/notify";
+import { deliverDueMessages } from "@/lib/staff-messages";
 
 export const dynamic = "force-dynamic";
 
 // Every 5 minutes, from cron-job.org (Vercel's free plan only runs daily jobs).
 // Needs the header  Authorization: Bearer <CRON_SECRET>.
-// Sends the shift reminders in lib/shift-alerts.ts, each once per shift.
+// Sends the shift reminders in lib/shift-alerts.ts, each once per shift, and
+// any scheduled staff messages that are due (lib/staff-messages.ts).
 export async function GET(req: NextRequest) {
   const bad = assertCron(req);
   if (bad) return bad;
@@ -26,7 +28,9 @@ export async function GET(req: NextRequest) {
     .select("id, staff_id, shift_date, start_time, end_time")
     .in("shift_date", [yesterday, today])
     .neq("status", "cancelled");
-  if (!shifts?.length) return NextResponse.json({ checked: 0, sent: 0 });
+  // scheduled staff messages due by now
+  const messages = await deliverDueMessages(now);
+  if (!shifts?.length) return NextResponse.json({ checked: 0, sent: 0, messages });
 
   const staffIds = [...new Set(shifts.map((s) => s.staff_id))];
   const shiftIds = shifts.map((s) => s.id);
@@ -65,5 +69,5 @@ export async function GET(req: NextRequest) {
     }
     sent++;
   }
-  return NextResponse.json({ checked: shifts.length, sent });
+  return NextResponse.json({ checked: shifts.length, sent, messages });
 }

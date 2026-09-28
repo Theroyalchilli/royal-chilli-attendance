@@ -63,6 +63,9 @@ export function navFor(role: StaffRole): NavGroup[] {
     { href: "/admin/food-safety/trace", label: "Trace", icon: "🚚" },
   ];
 
+  // managers and admins can message staff (phone + bell)
+  if (role === "manager" || role === "admin") team.push({ href: "/admin/messages", label: "Messages", icon: "📣" });
+
   const groups: NavGroup[] = [{ label: "Team", items: team }];
   if (role !== "hr") groups.push({ label: "Food Safety", items: foodSafety });
   groups.push({ label: "Me", items: me });
