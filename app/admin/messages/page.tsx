@@ -19,6 +19,7 @@ type Message = {
   recipients: number | null;
   phones: number | null;
   created_by_name: string | null;
+  reads: { read: string[]; unread: string[] } | null;
 };
 
 const AUDIENCES: { value: Audience; label: string; hint: string }[] = [
@@ -226,11 +227,42 @@ export default function MessagesPage() {
                   {!m.cancelled_at && m.recipients != null && ` · ${m.recipients} people · ${m.phones ?? 0} phones`}
                   {m.created_by_name && ` · by ${m.created_by_name}`}
                 </div>
+                {m.reads && <ReadReceipts reads={m.reads} />}
               </div>
             ))}
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+// "Read by 6 of 9" — tap to see who hasn't read it yet.
+function ReadReceipts({ reads }: { reads: { read: string[]; unread: string[] } }) {
+  const [open, setOpen] = useState(false);
+  const total = reads.read.length + reads.unread.length;
+  if (total === 0) return null;
+  const pct = Math.round((reads.read.length / total) * 100);
+  return (
+    <div className="mt-2">
+      <div className="flex items-center gap-3">
+        <div className="h-2 w-full max-w-[180px] overflow-hidden rounded-full bg-neutral-200">
+          <div className="h-full rounded-full bg-emerald-600" style={{ width: `${pct}%` }} />
+        </div>
+        <button onClick={() => setOpen((v) => !v)} className="text-xs font-semibold text-brand hover:underline">
+          Read by {reads.read.length} of {total} {reads.unread.length ? (open ? "▴" : "▾") : "✓"}
+        </button>
+      </div>
+      {open && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {reads.unread.map((n, i) => (
+            <span key={`u${i}`} className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">Not read: {n}</span>
+          ))}
+          {reads.read.map((n, i) => (
+            <span key={`r${i}`} className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">{n}</span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

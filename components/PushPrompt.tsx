@@ -1,27 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { phoneState, turnPhoneOn, type PhoneState } from "@/lib/push-client";
 
-// "Turn on notifications" card for staff and managers. Android: works in the
-// browser or the Home Screen app. iPhone: only once the app is added to the
-// Home Screen (iOS 16.4+), so there it explains that step first.
-
-type State = "hidden" | "ask" | "add-to-home" | "blocked" | "busy" | "on";
+// Dashboard card for people who haven't turned phone alerts on yet. Once
+// they have, it disappears — the switches live in My account → Notifications.
 const DISMISS_KEY = "rc-push-dismissed-at";
 
-function base64ToBytes(b64: string): Uint8Array {
-  const pad = "=".repeat((4 - (b64.length % 4)) % 4);
-  const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
-  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
-}
-
-const isIos = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
-const isStandalone = () =>
-  window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
-
 export default function PushPrompt() {
-  const [state, setState] = useState<State>("hidden");
-  const [key, setKey] = useState("");
+  const [state, setState] = useState<PhoneState | "hidden" | "busy" | "just-on">("hidden");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -32,24 +20,8 @@ export default function PushPrompt() {
       } catch {
         /* storage blocked — just show the card */
       }
-      const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-      if (!supported) {
-        if (isIos() && !isStandalone()) setState("add-to-home");
-        return;
-      }
-      const res = await fetch("/api/push", { cache: "no-store" }).catch(() => null);
-      const info = res && res.ok ? await res.json() : null;
-      if (!info?.enabled || !info.publicKey) return; // not set up on the server yet
-      setKey(info.publicKey);
-
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      const existing = await reg.pushManager.getSubscription();
-      if (existing && Notification.permission === "granted") {
-        // make sure the server still has this phone (e.g. after a reinstall)
-        await fetch("/api/push", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subscription: existing }) }).catch(() => {});
-        return; // already on — no card
-      }
-      setState(Notification.permission === "denied" ? "blocked" : "ask");
+      const s = await phoneState();
+      if (s === "off" || s === "blocked" || s === "add-to-home") setState(s);
     })().catch(() => {});
   }, []);
 
@@ -57,25 +29,11 @@ export default function PushPrompt() {
     setState("busy");
     setError("");
     try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        setState(permission === "denied" ? "blocked" : "ask");
-        return;
-      }
-      const reg = await navigator.serviceWorker.ready;
-      const sub =
-        (await reg.pushManager.getSubscription()) ??
-        (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64ToBytes(key) as BufferSource }));
-      const res = await fetch("/api/push", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscription: sub, test: true }),
-      });
-      if (!res.ok) throw new Error("save failed");
-      setState("on");
+      const s = await turnPhoneOn();
+      setState(s === "on" ? "just-on" : s);
     } catch {
       setError("Couldn't turn notifications on — try again");
-      setState("ask");
+      setState("off");
     }
   }
 
@@ -88,18 +46,23 @@ export default function PushPrompt() {
     setState("hidden");
   }
 
-  if (state === "hidden") return null;
+  if (state === "hidden" || state === "on" || state === "unsupported" || state === "not-configured") return null;
 
   const box = "rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-neutral-800";
-  if (state === "on") {
-    return <div className={`${box} border-emerald-200 bg-emerald-50 font-semibold text-emerald-800`}>🔔 Notifications are on — you&apos;ll get shift reminders here.</div>;
+  if (state === "just-on") {
+    return (
+      <div className={`${box} border-emerald-200 bg-emerald-50 text-emerald-800`}>
+        <b>🔔 Notifications are on.</b> Choose what buzzes your phone in{" "}
+        <Link href="/me/notifications" className="underline">My account → Notifications</Link>.
+      </div>
+    );
   }
   if (state === "add-to-home") {
     return (
       <div className={box}>
         <p className="font-semibold">🔔 Get shift reminders on your iPhone</p>
         <p className="mt-1 text-neutral-600">
-          Add this app to your Home Screen first: tap <b>Share</b> <span aria-hidden>⎋</span> then <b>Add to Home Screen</b>. Open it from there and turn notifications on.
+          Add this app to your Home Screen first: tap <b>Share</b> then <b>Add to Home Screen</b>. Open it from there and turn notifications on.
         </p>
         <button onClick={notNow} className="mt-2 text-xs text-neutral-500 underline">Not now</button>
       </div>

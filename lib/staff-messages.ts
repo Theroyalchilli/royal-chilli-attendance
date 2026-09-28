@@ -1,5 +1,6 @@
 import supabase from "./supabase";
 import { sendPush } from "./push";
+import { withNid } from "./notification-prefs";
 import { getAttendanceSettings, localDateString } from "./settings";
 
 // Messages a manager/admin writes to staff: into the 🔔 bell and to phones
@@ -57,12 +58,18 @@ export async function deliverMessage(id: number): Promise<{ recipients: number; 
   if (!claimed) return null;
   const m = claimed as MessageRow;
   const ids = await recipientsFor(m.audience, m.staff_ids ?? []);
-  if (ids.length) {
-    await supabase.from("notifications").insert(
-      ids.map((sid) => ({ staff_id: sid, type: "staff_message", message: `${m.title} — ${m.body}`, link: "/me" })),
-    );
-  }
-  const phones = await sendPush(ids, { title: m.title, body: m.body, url: "/me", tag: `message-${m.id}` });
+  // bell rows first; each phone alert links with its own id (?nid=) so
+  // tapping it opens the message and marks it read
+  const { data: rows } = ids.length
+    ? await supabase
+        .from("notifications")
+        .insert(ids.map((sid) => ({ staff_id: sid, type: "staff_message", title: m.title, message: m.body, message_id: m.id, link: null })))
+        .select("id, staff_id")
+    : { data: [] as { id: number; staff_id: number }[] };
+  const sends = await Promise.all(
+    (rows ?? []).map((r) => sendPush([r.staff_id], { title: m.title, body: m.body, url: withNid("/me", r.id), tag: `message-${m.id}` })),
+  );
+  const phones = sends.reduce((a, b) => a + b, 0);
   await supabase.from("staff_messages").update({ recipients: ids.length, phones }).eq("id", m.id);
   return { recipients: ids.length, phones };
 }

@@ -110,6 +110,13 @@ export default function Shell({
           <p className="text-sm font-medium">{user.name}</p>
           <p className="text-xs text-white/50">{ROLE_LABEL[user.role] ?? user.role}</p>
         </div>
+        <Link
+          href="/me/notifications"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/70 transition hover:bg-white/10 hover:text-white"
+        >
+          <span className="w-5 text-center">🔔</span>
+          Notifications
+        </Link>
         <button
           onClick={signOut}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/70 transition hover:bg-white/10 hover:text-white"
@@ -188,6 +195,13 @@ export default function Shell({
                         <p className="text-sm font-medium">{user.name}</p>
                         <p className="text-xs text-neutral-400">{ROLE_LABEL[user.role] ?? user.role}</p>
                       </div>
+                      <Link
+                        href="/me/notifications"
+                        onClick={() => setProfileOpen(false)}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-neutral-600 hover:bg-neutral-100"
+                      >
+                        🔔 Notifications
+                      </Link>
                       <button
                         onClick={() => { setProfileOpen(false); setPasswordOpen(true); }}
                         className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-neutral-600 hover:bg-neutral-100"

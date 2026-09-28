@@ -19,8 +19,19 @@ export async function GET(req: NextRequest) {
     supabase.from("staff").select("id, name, role").eq("active", 1).order("name"),
   ]);
   const names = new Map((staff ?? []).map((s) => [s.id, s.name]));
+  // read receipts: who has / hasn't opened each sent message
+  const sentIds = (messages ?? []).filter((m) => m.sent_at).map((m) => m.id);
+  const { data: receipts } = sentIds.length
+    ? await supabase.from("notifications").select("message_id, staff_id, read_at").in("message_id", sentIds)
+    : { data: [] as { message_id: number; staff_id: number; read_at: string | null }[] };
+  const readBy = new Map<number, { read: string[]; unread: string[] }>();
+  for (const r of receipts ?? []) {
+    const e = readBy.get(r.message_id) ?? { read: [], unread: [] };
+    (r.read_at ? e.read : e.unread).push(names.get(r.staff_id) ?? "Former staff");
+    readBy.set(r.message_id, e);
+  }
   return NextResponse.json({
-    messages: (messages ?? []).map((m) => ({ ...m, created_by_name: names.get(m.created_by) ?? null })),
+    messages: (messages ?? []).map((m) => ({ ...m, created_by_name: names.get(m.created_by) ?? null, reads: readBy.get(m.id) ?? null })),
     staff: staff ?? [],
   });
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import PushPrompt from "@/components/PushPrompt";
+import ManagerMessageBanner from "@/components/ManagerMessageBanner";
 import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 import { hm } from "@/lib/format";
@@ -71,7 +72,8 @@ export default function AdminDashboard() {
         {new Date(d.today + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
       </p>
 
-      <div className="mt-4">
+      <div className="mt-4 flex flex-col gap-3">
+        <ManagerMessageBanner />
         <PushPrompt />
       </div>
 

@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, Cell, ResponsiveContainer, Tooltip } from "rechar
 import { hm, decimalHours } from "@/lib/format";
 import ClockButton from "@/components/me/ClockButton";
 import PushPrompt from "@/components/PushPrompt";
+import ManagerMessageBanner from "@/components/ManagerMessageBanner";
 
 const DOW_LETTER = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -197,7 +198,8 @@ export default function MeDashboard() {
     <div className="mx-auto max-w-3xl">
       <h1 className="text-2xl font-bold">{greeting()}{name ? `, ${name}` : ""} 🎉</h1>
 
-      <div className="mt-4">
+      <div className="mt-4 flex flex-col gap-3">
+        <ManagerMessageBanner />
         <PushPrompt />
       </div>
 
