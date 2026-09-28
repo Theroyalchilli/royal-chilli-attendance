@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/supabase";
 import { requireManager } from "@/lib/guard";
+import { alertRotaReady } from "@/lib/rota-alerts";
 import { localIsoWeekday, getAttendanceSettings, localDateString } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -116,6 +117,7 @@ export async function POST(req: NextRequest) {
   if (inserts.length > 0) {
     const { error } = await supabase.from("shifts").insert(inserts);
     if (error) return NextResponse.json({ error: "Failed to write shifts" }, { status: 500 });
+    await alertRotaReady(inserts);
   }
   return NextResponse.json({ added: inserts.length });
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BarChart, Bar, XAxis, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { hm, decimalHours } from "@/lib/format";
 import ClockButton from "@/components/me/ClockButton";
+import PushPrompt from "@/components/PushPrompt";
 
 const DOW_LETTER = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -195,6 +196,10 @@ export default function MeDashboard() {
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="text-2xl font-bold">{greeting()}{name ? `, ${name}` : ""} 🎉</h1>
+
+      <div className="mt-4">
+        <PushPrompt />
+      </div>
 
       <div className="mt-5">
         <ClockButton />

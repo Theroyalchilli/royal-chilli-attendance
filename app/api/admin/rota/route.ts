@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/supabase";
 import { requireManager } from "@/lib/guard";
 import { audit } from "@/lib/attendance-write";
+import { alertShiftAdded, alertShiftChanged } from "@/lib/rota-alerts";
 import { getAttendanceSettings, localDateString } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -132,9 +133,11 @@ export async function POST(req: NextRequest) {
     if (!(sameDay ?? []).some((s) => s.id === id)) {
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
+    const before = (sameDay ?? []).find((s) => s.id === id)!;
     const { error } = await supabase.from("shifts").update(row).eq("id", id);
     if (error) return NextResponse.json({ error: "Update failed" }, { status: 500 });
     await audit(g.session.id, "rota_shift_update", id, null, row);
+    await alertShiftChanged(staffId, date, before.start_time, before.end_time, start, end);
     return NextResponse.json({ id });
   }
 
@@ -145,5 +148,6 @@ export async function POST(req: NextRequest) {
     .single();
   if (error) return NextResponse.json({ error: "Create failed" }, { status: 500 });
   await audit(g.session.id, "rota_shift_create", created.id, null, row);
+  await alertShiftAdded(staffId, date, start, end);
   return NextResponse.json({ id: created.id }, { status: 201 });
 }

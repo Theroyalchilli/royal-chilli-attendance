@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PushPrompt from "@/components/PushPrompt";
 import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 import { hm } from "@/lib/format";
@@ -69,6 +70,10 @@ export default function AdminDashboard() {
       <p className="mt-1 text-sm text-neutral-500">
         {new Date(d.today + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
       </p>
+
+      <div className="mt-4">
+        <PushPrompt />
+      </div>
 
       {d.stuck.length > 0 && (
         <Link href="/admin/attendance" className="mt-4 block rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-700 hover:bg-amber-100">

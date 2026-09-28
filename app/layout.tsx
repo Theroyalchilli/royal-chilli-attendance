@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   title: "The Royal Chilli — Attendance",
   robots: { index: false, follow: false },
   manifest: "/manifest.json",
+  // iPhone: opens full-screen from the Home Screen — required for phone notifications
+  appleWebApp: { capable: true, title: "Attendance", statusBarStyle: "default" },
   icons: {
     icon: [
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
