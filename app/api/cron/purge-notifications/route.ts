@@ -4,14 +4,15 @@ import { assertCron } from "@/lib/cron";
 
 export const dynamic = "force-dynamic";
 
-// Daily: delete every notification older than 24 hours, read or not — the
-// bell is for "what just happened", not an archive. Keeps it from growing
-// stale and cluttered.
+// Daily: delete notifications older than 30 days, read or not. The bell and
+// Notification history (My account → Notifications) show the last 30 days,
+// and "Read by 6 of 9" on sent messages stays right for that long.
+const KEEP_DAYS = 30;
 export async function GET(req: NextRequest) {
   const bad = assertCron(req);
   if (bad) return bad;
 
-  const cutoff = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const cutoff = new Date(Date.now() - KEEP_DAYS * 24 * 3600_000).toISOString();
   const { error, count } = await supabase
     .from("notifications")
     .delete({ count: "exact" })

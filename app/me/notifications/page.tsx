@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { phoneState, sendTest, turnPhoneOff, turnPhoneOn, type PhoneState } from "@/lib/push-client";
 
 // My account → Notifications: phone alerts on/off for this phone, and which
@@ -109,6 +110,10 @@ export default function NotificationSettingsPage() {
     <div className="mx-auto max-w-xl">
       <h1 className="text-2xl font-bold">Notifications</h1>
       <p className="mt-1 text-sm text-neutral-500">Choose what buzzes your phone. Everything still appears in the 🔔 bell.</p>
+      <Link href="/me/notifications/history" className="mt-3 flex items-center justify-between rounded-2xl border border-neutral-200 bg-white px-4 py-3.5 hover:bg-neutral-50">
+        <span className="font-medium">🕘 Notification history</span>
+        <span className="text-sm text-neutral-400">Last 30 days →</span>
+      </Link>
 
       <p className={label}>This phone</p>
       <div className={card}>

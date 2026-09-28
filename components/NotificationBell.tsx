@@ -268,6 +268,13 @@ export default function NotificationBell() {
                   </div>
                 ))
               )}
+              <a
+                href="/me/notifications/history"
+                onClick={() => setOpen(false)}
+                className="mt-4 block rounded-xl py-3 text-center text-sm font-semibold text-brand hover:bg-brand/5"
+              >
+                See all history (30 days) →
+              </a>
             </div>
           </>
         )}
