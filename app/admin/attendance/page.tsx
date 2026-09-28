@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { clockTime, dayLabel, hm } from "@/lib/format";
 import { SHIFT_STATUS_BADGE, SHIFT_STATUS_LABEL, type ShiftStatus } from "@/lib/shift-status";
 
@@ -115,11 +115,18 @@ export default function AttendancePage() {
     if (qsOpen) setOpenTargetId(Number(qsOpen));
   }, []);
 
+  // Only the newest request may fill the table. Opening a notification link
+  // starts a "today, everyone" load and then, once the link's date/person are
+  // read, a second one — if the first answered last it used to overwrite the
+  // right day with today's rows under the right heading.
+  const latestLoad = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++latestLoad.current;
     const p = new URLSearchParams({ from, to });
     if (staffId) p.set("staff_id", staffId);
     const res = await fetch(`/api/admin/attendance?${p}`, { cache: "no-store" });
     const data = await res.json();
+    if (seq !== latestLoad.current) return; // a newer range/person was asked for meanwhile
     setRows(data.rows ?? []);
     setStaff(data.staff ?? []);
     setPending(data.pending ?? []);
