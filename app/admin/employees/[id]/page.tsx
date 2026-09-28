@@ -79,6 +79,17 @@ const STATUS_BADGE: Record<string, string> = {
 const gbp = (n: number) => `£${n.toFixed(2)}`;
 const d = (iso: string | null) => (iso ? new Date(iso + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "?");
 
+/** Sessions grouped by work date (in list order), each day's sessions by clock-in — split shifts read as one day. */
+function groupByDay(rows: Row[]): [string, Row[]][] {
+  const m = new Map<string, Row[]>();
+  for (const r of rows) {
+    if (!m.has(r.work_date)) m.set(r.work_date, []);
+    m.get(r.work_date)!.push(r);
+  }
+  for (const list of m.values()) list.sort((a, b) => (a.clock_in ?? "").localeCompare(b.clock_in ?? ""));
+  return [...m.entries()];
+}
+
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -242,19 +253,40 @@ export default function EmployeeProfilePage() {
                 </tr>
               </thead>
               <tbody>
-                {data.attendance.map((r) => (
-                  <tr key={r.id} onClick={() => setEditingRow(r)} className="cursor-pointer border-t border-neutral-100 hover:bg-neutral-50">
-                    <td className="px-3 py-2 font-medium">{dayLabel(r.work_date)}</td>
-                    <td className="px-3 py-2">{clockTime(r.clock_in)}</td>
-                    <td className="px-3 py-2">{r.clock_out ? clockTime(r.clock_out) : <span className="text-emerald-600">open</span>}</td>
-                    <td className="px-3 py-2">{r.clock_out ? hm(r.net_work_seconds) : "—"}</td>
-                    <td className="px-3 py-2 text-xs">
-                      {r.late_seconds > 0 && <span className="mr-1 text-amber-600">late {hm(r.late_seconds)}</span>}
-                      {r.photo_missing && <span className="mr-1 text-neutral-400">no photo</span>}
-                      {r.approval_status === "pending" && <span className="text-amber-600">needs review</span>}
-                    </td>
-                  </tr>
-                ))}
+                {groupByDay(data.attendance).map(([date, sessions]) => {
+                  const closed = sessions.filter((r) => r.clock_out);
+                  const total = closed.reduce((sum, r) => sum + r.net_work_seconds, 0);
+                  return [
+                    ...sessions.map((r, i) => (
+                      <tr key={r.id} onClick={() => setEditingRow(r)} className={`cursor-pointer hover:bg-neutral-50 ${i === 0 ? "border-t border-neutral-100" : ""}`}>
+                        <td className="px-3 py-2 font-medium">{i === 0 ? dayLabel(date) : ""}</td>
+                        <td className="px-3 py-2">{clockTime(r.clock_in)}</td>
+                        <td className="px-3 py-2">{r.clock_out ? clockTime(r.clock_out) : <span className="text-emerald-600">open</span>}</td>
+                        <td className="px-3 py-2">{r.clock_out ? hm(r.net_work_seconds) : "—"}</td>
+                        <td className="px-3 py-2 text-xs">
+                          {r.late_seconds > 0 && <span className="mr-1 text-amber-600">late {hm(r.late_seconds)}</span>}
+                          {r.photo_missing && <span className="mr-1 text-neutral-400">no photo</span>}
+                          {r.approval_status === "pending" && <span className="text-amber-600">needs review</span>}
+                        </td>
+                      </tr>
+                    )),
+                    ...(sessions.length > 1
+                      ? [
+                          <tr key={`total-${date}`} className="text-xs text-neutral-500">
+                            <td className="px-3 pb-2" />
+                            <td colSpan={2} className="px-3 pb-2"><div className="border-t border-neutral-200 pt-1">{sessions.length} sessions</div></td>
+                            <td className="px-3 pb-2">
+                              <div className="border-t border-neutral-200 pt-1 font-semibold text-neutral-800">
+                                {hm(total)}
+                                {closed.length < sessions.length && <span className="font-normal text-neutral-400"> so far</span>}
+                              </div>
+                            </td>
+                            <td className="px-3 pb-2" />
+                          </tr>,
+                        ]
+                      : []),
+                  ];
+                })}
               </tbody>
             </table>
           </div>

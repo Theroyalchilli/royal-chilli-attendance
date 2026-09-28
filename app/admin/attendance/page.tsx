@@ -24,9 +24,30 @@ type Row = {
   notes: string | null;
   is_stuck: boolean;
   rota: string | null;
+  rota_shift: string | null;
 };
 type Staff = { id: number; name: string };
 type Pending = { staff_id: number; staff_name: string; work_date: string; shift_start: string; shift_end: string; status: ShiftStatus };
+
+/** One person's day: every session they worked plus any shift still waiting on a clock-in. */
+type PersonDay = { staff_id: number; staff_name: string; sessions: Row[]; pending: Pending[] };
+
+// Split shifts: a person's sessions for a day sit together in one block
+// instead of wherever their clock-in time lands among everyone else's.
+function byPerson(rows: Row[], pending: Pending[]): PersonDay[] {
+  const m = new Map<number, PersonDay>();
+  const get = (id: number, name: string) => {
+    if (!m.has(id)) m.set(id, { staff_id: id, staff_name: name, sessions: [], pending: [] });
+    return m.get(id)!;
+  };
+  for (const r of rows) get(r.staff_id, r.staff_name).sessions.push(r);
+  for (const p of pending) get(p.staff_id, p.staff_name).pending.push(p);
+  for (const d of m.values()) {
+    d.sessions.sort((a, b) => (a.clock_in ?? "").localeCompare(b.clock_in ?? ""));
+    d.pending.sort((a, b) => a.shift_start.localeCompare(b.shift_start));
+  }
+  return [...m.values()].sort((a, b) => a.staff_name.localeCompare(b.staff_name));
+}
 
 // Today's UK date — toISOString() is UTC, which in summer time still says
 // yesterday between midnight and 1am.
@@ -230,38 +251,76 @@ export default function AttendancePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {dayPending.map((p) => (
-                      <tr key={`pending-${p.staff_id}`} className="border-t border-neutral-100 bg-amber-50/50">
-                        <td className="px-3 py-2 font-medium">{p.staff_name}</td>
-                        <td className="px-3 py-2 text-neutral-500">{p.shift_start} – {p.shift_end}</td>
-                        <td className="px-3 py-2 text-neutral-400">—</td>
-                        <td className="px-3 py-2 text-neutral-400">—</td>
-                        <td className="px-3 py-2 text-neutral-400">—</td>
-                        <td className="px-3 py-2">
-                          <div className="flex items-center gap-2">
-                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SHIFT_STATUS_BADGE[p.status]}`}>{SHIFT_STATUS_LABEL[p.status]}</span>
-                            <button onClick={() => setQuickClockIn(p)} className="rounded-lg bg-brand px-2 py-1 text-xs font-semibold text-white hover:bg-brand-dark">Clock in now</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {dayRows.map((r) => (
-                      <tr key={r.id} onClick={() => setEditing(r)} className="cursor-pointer border-t border-neutral-100 hover:bg-neutral-50">
-                        <td className="px-3 py-2 font-medium">{r.staff_name}</td>
-                        <td className="px-3 py-2 text-neutral-500">{r.rota ?? <span className="text-neutral-400">—</span>}</td>
-                        <td className="px-3 py-2">{clockTime(r.clock_in)}</td>
-                        <td className="px-3 py-2">{r.clock_out ? clockTime(r.clock_out) : <span className={r.is_stuck ? "text-red-600" : "text-emerald-600"}>open</span>}</td>
-                        <td className="px-3 py-2">{r.clock_out ? hm(r.net_work_seconds) : "—"}</td>
-                        <td className="px-3 py-2 text-xs">
-                          {r.is_stuck && <span className="mr-1 rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700">forgotten clock-out</span>}
-                          {r.late_seconds > 0 && <span className="mr-1 text-amber-600">late {hm(r.late_seconds)}</span>}
-                          {r.adjustment_seconds !== 0 && <span className="mr-1 text-blue-600">adj {r.adjustment_seconds > 0 ? "+" : ""}{Math.round(r.adjustment_seconds / 60)}m</span>}
-                          {r.photo_missing && <span className="mr-1 text-neutral-400">no photo</span>}
-                          {r.approval_status === "pending" && !r.is_stuck && <span className="text-amber-600">needs review</span>}
-                          {!r.clock_out && !r.is_stuck && !r.late_seconds && r.adjustment_seconds === 0 && !r.photo_missing && r.approval_status !== "pending" && <span className="text-emerald-600">on shift</span>}
-                        </td>
-                      </tr>
-                    ))}
+                    {byPerson(dayRows, dayPending).map((person) => {
+                      const multi = person.sessions.length + person.pending.length > 1;
+                      const closed = person.sessions.filter((r) => r.clock_out);
+                      const total = closed.reduce((sum, r) => sum + r.net_work_seconds, 0);
+                      const stillOpen = person.sessions.some((r) => !r.clock_out);
+                      // who's named on a line: only the block's first line
+                      let first = true;
+                      const nameCell = () => {
+                        const cell = <td className="px-3 py-2 font-medium">{first ? person.staff_name : ""}</td>;
+                        first = false;
+                        return cell;
+                      };
+                      const lineBorder = (isFirst: boolean) => (isFirst ? "border-t border-neutral-100" : "");
+                      return [
+                        ...person.sessions.map((r, i) => (
+                          <tr key={r.id} onClick={() => setEditing(r)} className={`cursor-pointer hover:bg-neutral-50 ${lineBorder(i === 0)}`}>
+                            {nameCell()}
+                            <td className="px-3 py-2 text-neutral-500">
+                              {r.rota_shift ?? (person.sessions.length === 1 || i === 0 ? r.rota : null) ?? <span className="text-neutral-400">—</span>}
+                            </td>
+                            <td className="px-3 py-2">{clockTime(r.clock_in)}</td>
+                            <td className="px-3 py-2">{r.clock_out ? clockTime(r.clock_out) : <span className={r.is_stuck ? "text-red-600" : "text-emerald-600"}>open</span>}</td>
+                            <td className="px-3 py-2">{r.clock_out ? hm(r.net_work_seconds) : "—"}</td>
+                            <td className="px-3 py-2 text-xs">
+                              {r.is_stuck && <span className="mr-1 rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700">forgotten clock-out</span>}
+                              {r.late_seconds > 0 && <span className="mr-1 text-amber-600">late {hm(r.late_seconds)}</span>}
+                              {r.adjustment_seconds !== 0 && <span className="mr-1 text-blue-600">adj {r.adjustment_seconds > 0 ? "+" : ""}{Math.round(r.adjustment_seconds / 60)}m</span>}
+                              {r.photo_missing && <span className="mr-1 text-neutral-400">no photo</span>}
+                              {r.approval_status === "pending" && !r.is_stuck && <span className="text-amber-600">needs review</span>}
+                              {!r.clock_out && !r.is_stuck && !r.late_seconds && r.adjustment_seconds === 0 && !r.photo_missing && r.approval_status !== "pending" && <span className="text-emerald-600">on shift</span>}
+                            </td>
+                          </tr>
+                        )),
+                        ...person.pending.map((p, i) => (
+                          <tr key={`pending-${p.staff_id}-${p.shift_start}`} className={`bg-amber-50/50 ${lineBorder(person.sessions.length === 0 && i === 0)}`}>
+                            {nameCell()}
+                            <td className="px-3 py-2 text-neutral-500">{p.shift_start} – {p.shift_end}</td>
+                            <td className="px-3 py-2 text-neutral-400">—</td>
+                            <td className="px-3 py-2 text-neutral-400">—</td>
+                            <td className="px-3 py-2 text-neutral-400">—</td>
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SHIFT_STATUS_BADGE[p.status]}`}>{SHIFT_STATUS_LABEL[p.status]}</span>
+                                <button onClick={() => setQuickClockIn(p)} className="rounded-lg bg-brand px-2 py-1 text-xs font-semibold text-white hover:bg-brand-dark">Clock in now</button>
+                              </div>
+                            </td>
+                          </tr>
+                        )),
+                        ...(multi && person.sessions.length > 0
+                          ? [
+                              <tr key={`total-${person.staff_id}`} className="text-xs text-neutral-500">
+                                <td className="px-3 pb-2" />
+                                <td className="px-3 pb-2" />
+                                <td colSpan={2} className="px-3 pb-2">
+                                  <div className="border-t border-neutral-200 pt-1">
+                                    {person.sessions.length} session{person.sessions.length === 1 ? "" : "s"}
+                                  </div>
+                                </td>
+                                <td className="px-3 pb-2">
+                                  <div className="border-t border-neutral-200 pt-1 font-semibold text-neutral-800">
+                                    {hm(total)}
+                                    {stillOpen && <span className="font-normal text-neutral-400"> so far</span>}
+                                  </div>
+                                </td>
+                                <td className="px-3 pb-2" />
+                              </tr>,
+                            ]
+                          : []),
+                      ];
+                    })}
                   </tbody>
                 </table>
               </div>

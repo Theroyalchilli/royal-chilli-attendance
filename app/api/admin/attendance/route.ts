@@ -83,6 +83,7 @@ export async function GET(req: NextRequest) {
   // The shift(s) currently on the rota for each person/day — shown in the
   // Rota column. Live rota, not the schedule snapshotted at clock-in, so it
   // matches the Rota page after edits. Split shifts are joined.
+  const rotaByShiftId = new Map((shifts ?? []).map((s) => [s.id, `${s.start_time.slice(0, 5)} – ${s.end_time.slice(0, 5)}`]));
   const rotaByKey = new Map<string, string[]>();
   for (const s of [...(shifts ?? [])].sort((a, b) => a.start_time.localeCompare(b.start_time))) {
     const key = `${s.staff_id}-${s.shift_date}`;
@@ -95,6 +96,8 @@ export async function GET(req: NextRequest) {
       ...r,
       staff_name: nameById.get(r.staff_id) ?? "?",
       rota: rotaByKey.get(`${r.staff_id}-${r.work_date}`)?.join(", ") ?? null,
+      // the one shift this session was clocked against (split-shift days)
+      rota_shift: r.shift_id != null ? (rotaByShiftId.get(r.shift_id) ?? null) : null,
       is_stuck: !r.clock_out && !!r.clock_in && r.clock_in < staleBefore,
     })),
     staff: staff ?? [],
