@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { requireManager } from "@/lib/guard";
 import { audit } from "@/lib/attendance-write";
 
@@ -15,10 +15,11 @@ const NEXT: Record<string, string[]> = {
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
   const id = Number((await params).id);
   const { status } = await req.json();
 
-  const { data: ts } = await supabase.from("timesheets").select("*").eq("id", id).maybeSingle();
+  const { data: ts } = await db.from("timesheets").select("*").eq("id", id).maybeSingle();
   if (!ts) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!NEXT[ts.status]?.includes(status)) {
     return NextResponse.json({ error: `Can't move from ${ts.status} to ${status}` }, { status: 400 });
@@ -34,7 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (status === "locked") patch.locked = true;
   if (status === "draft" || status === "rejected") patch.locked = false;
 
-  const { error } = await supabase.from("timesheets").update(patch).eq("id", id);
+  const { error } = await db.from("timesheets").update(patch).eq("id", id);
   if (error) return NextResponse.json({ error: "Update failed" }, { status: 500 });
 
   await audit(g.session.id, `timesheet_${status}`, id, { status: ts.status }, { status });

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { bizDb } from "@/lib/business-db";
 import supabase from "@/lib/supabase";
+import { staffIdsAt } from "@/lib/business";
 import { requireManager } from "@/lib/guard";
 import { audit } from "@/lib/attendance-write";
 import { alertShiftAdded, alertShiftChanged } from "@/lib/rota-alerts";
@@ -9,11 +11,13 @@ export const dynamic = "force-dynamic";
 
 // Usual patterns for the modal's defaults. Falls back to the single-slot
 // columns until POS migration 066 (rota_start_2/rota_end_2) has been run.
-async function loadActiveStaffRotas() {
+// Staff who work at this business.
+async function loadActiveStaffRotas(businessId: number) {
+  const here = await staffIdsAt(businessId);
   const cols = "id, name, rota_start, rota_end, rota_working_days";
-  const r = await supabase.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1).order("name");
+  const r = await supabase.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1).in("id", here).order("name");
   if (!r.error) return r;
-  return supabase.from("staff").select(cols).eq("active", 1).order("name");
+  return supabase.from("staff").select(cols).eq("active", 1).in("id", here).order("name");
 }
 
 function weekDays(weekStart: string): string[] {
@@ -28,6 +32,7 @@ function weekDays(weekStart: string): string[] {
 export async function GET(req: NextRequest) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
 
   const weekStart = new URL(req.url).searchParams.get("week_start");
   if (!weekStart) return NextResponse.json({ error: "week_start required" }, { status: 400 });
@@ -35,14 +40,14 @@ export async function GET(req: NextRequest) {
   const weekEnd = days[6];
 
   const [{ data: staff }, { data: shifts }, { data: leave }] = await Promise.all([
-    loadActiveStaffRotas(),
-    supabase
+    loadActiveStaffRotas(g.session.businessId),
+    db
       .from("shifts")
       .select("id, staff_id, shift_date, start_time, end_time, position, notes, status")
       .gte("shift_date", weekStart)
       .lte("shift_date", weekEnd)
       .neq("status", "cancelled"),
-    supabase
+    db
       .from("leave_requests")
       .select("staff_id, start_date, end_date, leave_type")
       .eq("status", "approved")
@@ -79,6 +84,7 @@ const hhmm = (t: string) => t.slice(0, 5);
 export async function POST(req: NextRequest) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
 
   const b = await req.json();
   const id = b.id ? Number(b.id) : null;
@@ -99,7 +105,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Can't schedule a shift for a date that's already passed" }, { status: 400 });
   }
 
-  const { data: sameDay } = await supabase
+  const { data: sameDay } = await db
     .from("shifts")
     .select("id, start_time, end_time")
     .eq("staff_id", staffId)
@@ -134,14 +140,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Shift not found" }, { status: 404 });
     }
     const before = (sameDay ?? []).find((s) => s.id === id)!;
-    const { error } = await supabase.from("shifts").update(row).eq("id", id);
+    const { error } = await db.from("shifts").update(row).eq("id", id);
     if (error) return NextResponse.json({ error: "Update failed" }, { status: 500 });
     await audit(g.session.id, "rota_shift_update", id, null, row);
     await alertShiftChanged(staffId, date, before.start_time, before.end_time, start, end);
     return NextResponse.json({ id });
   }
 
-  const { data: created, error } = await supabase
+  const { data: created, error } = await db
     .from("shifts")
     .insert({ ...row, created_by: g.session.id })
     .select("id")

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
+import { staffIdsAt } from "@/lib/business";
 import { requireManager } from "@/lib/guard";
 
 export const dynamic = "force-dynamic";
@@ -31,15 +32,16 @@ function sumRows(rows: { net_work_seconds: number; regular_seconds: number; over
 export async function GET(req: NextRequest) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
   const { searchParams } = new URL(req.url);
   const ps = searchParams.get("period_start");
   const pe = searchParams.get("period_end");
   if (!ps || !pe) return NextResponse.json({ error: "period_start and period_end required" }, { status: 400 });
 
   const [{ data: sheets }, { data: staff }, { data: att }] = await Promise.all([
-    supabase.from("timesheets").select("*").eq("period_start", ps).eq("period_end", pe),
-    supabase.from("staff").select("id, name, pay_rate").eq("active", 1).order("name"),
-    supabase.from("attendance").select("staff_id, work_date, net_work_seconds, regular_seconds, overtime_seconds, break_seconds, late_seconds, clock_in, clock_out").gte("work_date", ps).lte("work_date", pe),
+    db.from("timesheets").select("*").eq("period_start", ps).eq("period_end", pe),
+    db.from("staff").select("id, name, pay_rate").eq("active", 1).in("id", await staffIdsAt(g.session.businessId)).order("name"),
+    db.from("attendance").select("staff_id, work_date, net_work_seconds, regular_seconds, overtime_seconds, break_seconds, late_seconds, clock_in, clock_out").gte("work_date", ps).lte("work_date", pe),
   ]);
 
   const sheetByStaff = new Map((sheets ?? []).map((s) => [s.staff_id, s]));
@@ -68,13 +70,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
   const { period_start: ps, period_end: pe } = await req.json();
   if (!ps || !pe) return NextResponse.json({ error: "period_start and period_end required" }, { status: 400 });
 
   const [{ data: staff }, { data: att }, { data: existing }] = await Promise.all([
-    supabase.from("staff").select("id").eq("active", 1),
-    supabase.from("attendance").select("staff_id, net_work_seconds, regular_seconds, overtime_seconds, break_seconds, late_seconds, clock_out").gte("work_date", ps).lte("work_date", pe),
-    supabase.from("timesheets").select("id, staff_id, locked").eq("period_start", ps).eq("period_end", pe),
+    db.from("staff").select("id").eq("active", 1).in("id", await staffIdsAt(g.session.businessId)),
+    db.from("attendance").select("staff_id, net_work_seconds, regular_seconds, overtime_seconds, break_seconds, late_seconds, clock_out").gte("work_date", ps).lte("work_date", pe),
+    db.from("timesheets").select("id, staff_id, locked").eq("period_start", ps).eq("period_end", pe),
   ]);
 
   const lockedStaff = new Set((existing ?? []).filter((e) => e.locked).map((e) => e.staff_id));
@@ -92,7 +95,7 @@ export async function POST(req: NextRequest) {
       continue;
     }
     const totals = sumRows(attByStaff.get(s.id) ?? []);
-    await supabase.from("timesheets").upsert(
+    await db.from("timesheets").upsert(
       {
         staff_id: s.id,
         period_start: ps,
@@ -101,7 +104,7 @@ export async function POST(req: NextRequest) {
         totals,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "staff_id,period_start,period_end" },
+      { onConflict: "business_id,staff_id,period_start,period_end" },
     );
     written++;
   }

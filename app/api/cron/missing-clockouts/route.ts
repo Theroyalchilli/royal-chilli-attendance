@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
   const { data: stale } = await supabase
     .from("attendance")
-    .select("id, staff_id, work_date, clock_in, notes, approval_status")
+    .select("id, staff_id, work_date, clock_in, notes, approval_status, business_id")
     .is("clock_out", null)
     .not("clock_in", "is", null)
     .lt("clock_in", cutoff)
@@ -47,6 +47,7 @@ export async function GET(req: NextRequest) {
     await audit(null, "auto_missing_clockout", r.id, null, { clock_in: r.clock_in });
     await notify(r.staff_id, "missed_clockout", "You didn't clock out — a manager needs to fix your hours.", "/me/attendance");
     await notifyManagers(
+      r.business_id,
       "missed_clockout",
       `${nameById.get(r.staff_id) ?? "Someone"} didn't clock out.`,
       `/admin/attendance?staff_id=${r.staff_id}&date=${r.work_date}&open=${r.id}`,

@@ -1,4 +1,5 @@
 import supabase from "./supabase";
+import { bizDb } from "./business-db";
 import { resolveScheduled } from "./time-engine";
 import { localIsoWeekday, type AttendanceSettings } from "./settings";
 
@@ -64,12 +65,14 @@ export async function loadStaffRota<T extends object = object>(
  * working day; otherwise none.
  */
 export async function scheduleSlotsFor(
+  businessId: number,
   staffId: number,
   workDate: string,
   rota: StaffRota,
   settings: AttendanceSettings,
 ): Promise<Slot[]> {
-  const { data: shifts } = await supabase
+  // Shifts at this business only — someone may also work at another.
+  const { data: shifts } = await bizDb(businessId)
     .from("shifts")
     .select("id, start_time, end_time")
     .eq("staff_id", staffId)
@@ -149,6 +152,7 @@ export function forgottenClockOut(
  * when nothing is scheduled — the time engine then skips lateness.
  */
 export async function resolveScheduleFor(
+  businessId: number,
   staffId: number,
   workDate: string,
   rota: StaffRota,
@@ -157,7 +161,7 @@ export async function resolveScheduleFor(
 ): Promise<ResolvedSchedule> {
   const grace =
     rota.rota_grace_minutes != null ? rota.rota_grace_minutes : settings.defaultGraceMinutes;
-  const slots = await scheduleSlotsFor(staffId, workDate, rota, settings);
+  const slots = await scheduleSlotsFor(businessId, staffId, workDate, rota, settings);
   const slot = at ? pickSlot(slots, at) : (slots[0] ?? null);
   return {
     scheduledStart: slot?.start ?? null,

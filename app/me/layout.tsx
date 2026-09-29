@@ -10,7 +10,7 @@ export default async function MeLayout({ children }: { children: React.ReactNode
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const approvals = session.role === "employee" ? 0 : await pendingApprovals().catch(() => 0);
+  const approvals = session.role === "employee" ? 0 : await pendingApprovals(session.businessId).catch(() => 0);
 
   return (
     <Shell user={session} nav={navFor(session.role)} approvals={approvals}>

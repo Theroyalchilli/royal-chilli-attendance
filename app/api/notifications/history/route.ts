@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { KINDS } from "@/lib/notification-kinds";
 
@@ -12,6 +12,7 @@ const PAGE = 30;
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
 
   const sp = new URL(req.url).searchParams;
   const q = (sp.get("q") || "").trim().replace(/[%_,()]/g, " ").slice(0, 60);
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
   const range = sp.get("range") || "all";
   const before = sp.get("before");
 
-  let query = supabase
+  let query = db
     .from("notifications")
     .select("id, type, title, message, message_id, link, read_at, deleted_at, created_at")
     .eq("staff_id", session.id)

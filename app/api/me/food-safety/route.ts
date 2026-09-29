@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { getAttendanceSettings, localDateString } from "@/lib/settings";
 import { canViewFoodSafety, canLogFoodSafety, canSignoffFoodSafety } from "@/lib/food-safety-permissions";
@@ -13,9 +13,10 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
   if (!canViewFoodSafety(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { data: staffRow } = await supabase.from("staff").select("can_signoff").eq("id", session.id).single();
+  const { data: staffRow } = await db.from("staff").select("can_signoff").eq("id", session.id).single();
   const canSignoff = canSignoffFoodSafety(session.role, staffRow?.can_signoff ?? false);
   const canLog = canLogFoodSafety(session.role);
 
@@ -26,27 +27,27 @@ export async function GET(req: NextRequest) {
 
   const [{ data: checkTypes }, { data: tempTypes }, { data: checkLogs }, { data: tempLogs }, { data: problems }, { data: signoff }] =
     await Promise.all([
-      supabase.from("fs_check_type").select("*").eq("active", true).order("check_window").order("display_order"),
-      supabase.from("fs_temp_type").select("*").eq("active", true).order("display_order"),
-      supabase
+      db.from("fs_check_type").select("*").eq("active", true).order("check_window").order("display_order"),
+      db.from("fs_temp_type").select("*").eq("active", true).order("display_order"),
+      db
         .from("fs_check_log")
         .select("id, check_type_id, ok, problem_note, staff_id, created_at, staff:staff(name)")
         .gte("created_at", dayStart)
         .lte("created_at", dayEnd)
         .order("created_at", { ascending: false }),
-      supabase
+      db
         .from("fs_temp_log")
         .select("id, temp_type_id, value, pass, corrective_action, staff_id, created_at, staff:staff(name)")
         .gte("created_at", dayStart)
         .lte("created_at", dayEnd)
         .order("created_at", { ascending: false }),
-      supabase
+      db
         .from("fs_problem")
         .select("id, what, action, staff_id, created_at, staff:staff(name)")
         .gte("created_at", dayStart)
         .lte("created_at", dayEnd)
         .order("created_at", { ascending: false }),
-      supabase.from("fs_signoff").select("id, staff_id, created_at, staff:staff(name)").eq("day", today).maybeSingle(),
+      db.from("fs_signoff").select("id, staff_id, created_at, staff:staff(name)").eq("day", today).maybeSingle(),
     ]);
 
   return NextResponse.json({

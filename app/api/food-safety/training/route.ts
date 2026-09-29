@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { canViewTeamTraining, canRecordTraining } from "@/lib/food-safety-permissions";
 import { storeCertificateFile } from "@/lib/food-safety-files";
@@ -12,12 +12,13 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
   if (!canViewTeamTraining(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const [{ data: staffRows }, { data: courses }, { data: records }] = await Promise.all([
-    supabase.from("staff").select("id, name, role").eq("active", 1).neq("role", "hr").order("name"),
-    supabase.from("fs_course").select("*").eq("active", true).order("name"),
-    supabase
+    db.from("staff").select("id, name, role").eq("active", 1).neq("role", "hr").order("name"),
+    db.from("fs_course").select("*").eq("active", true).order("name"),
+    db
       .from("fs_training_record")
       .select("id, staff_id, course_id, level, date_done, trainer, certificate_ref")
       .order("date_done", { ascending: false }),
@@ -58,6 +59,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
   if (!canRecordTraining(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { staff_id, course_id, level, date_done, trainer, certificate } = await req.json().catch(() => ({}));
@@ -72,7 +74,7 @@ export async function POST(req: NextRequest) {
     certificateRef = result.path;
   }
 
-  const { error } = await supabase.from("fs_training_record").insert({
+  const { error } = await db.from("fs_training_record").insert({
     staff_id,
     course_id,
     level: level || null,

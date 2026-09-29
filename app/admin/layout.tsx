@@ -10,7 +10,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!session) redirect("/login");
   if (!canManageAttendance(session.role)) redirect("/me");
 
-  const approvals = session.role === "employee" ? 0 : await pendingApprovals().catch(() => 0);
+  const approvals = session.role === "employee" ? 0 : await pendingApprovals(session.businessId).catch(() => 0);
 
   return (
     <Shell user={session} nav={navFor(session.role)} approvals={approvals}>

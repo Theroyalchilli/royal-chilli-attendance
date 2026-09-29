@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import supabase from "@/lib/supabase";
 import { createSession, getSessionCookieOptions } from "@/lib/auth";
 import type { StaffRole } from "@/lib/types";
+import { loginBusinessId } from "@/lib/business";
 
 // Same credentials as royal-chilli-pos: verifies username + password against the
 // shared `staff` table (same bcrypt hash). Everyone logs in — employees land on
@@ -30,7 +31,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid username or password" }, { status: 401 });
     }
 
-    const token = await createSession({ id: data.id, name: data.name, role: data.role as StaffRole });
+    const businessId = await loginBusinessId(data.id);
+    if (businessId == null) {
+      return NextResponse.json({ error: "Your account isn't set up at any business yet — ask a manager." }, { status: 403 });
+    }
+    const token = await createSession({ id: data.id, name: data.name, role: data.role as StaffRole, businessId });
     const { name: cookieName, options } = getSessionCookieOptions();
 
     const res = NextResponse.json({ success: true, user: { id: data.id, name: data.name, role: data.role } });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { createSession, getSessionCookieOptions } from "@/lib/auth";
 import type { SessionUser } from "@/lib/types";
+import { DEFAULT_BUSINESS_ID } from "@/lib/business-id";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "royal-chilli-pos-fallback-secret-key-2024"
@@ -22,6 +23,7 @@ export async function GET(req: NextRequest) {
       id: payload.id as number,
       name: payload.name as string,
       role: payload.role as SessionUser["role"],
+      businessId: typeof payload.bid === "number" && payload.bid > 0 ? payload.bid : DEFAULT_BUSINESS_ID,
     };
     const sessionToken = await createSession(user);
     const { name: cookieName, options } = getSessionCookieOptions();

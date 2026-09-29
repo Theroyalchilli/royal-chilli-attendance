@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import supabase from "./supabase";
+import { staffIdsAt } from "./business";
 
 // Phone notifications (web push) for staff who tapped "Turn on notifications"
 // — Android, and iPhone (iOS 16.4+) when the app is on the Home Screen.
@@ -64,8 +65,9 @@ export async function sendPush(staffIds: number[], msg: PushMessage): Promise<nu
   }
 }
 
-/** Everyone who can act on manager things (manager / hr / admin). */
-export async function managerIds(): Promise<number[]> {
-  const { data } = await supabase.from("staff").select("id").eq("active", 1).in("role", ["manager", "hr", "admin"]);
+/** Everyone at this business who can act on manager things (manager / hr / admin). */
+export async function managerIds(businessId: number): Promise<number[]> {
+  const { data } = await supabase.from("staff").select("id").eq("active", 1).in("role", ["manager", "hr", "admin"])
+    .in("id", await staffIdsAt(businessId));
   return (data ?? []).map((s) => s.id);
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { canViewFoodSafety, canViewTeamTraining } from "@/lib/food-safety-permissions";
 import { signedCertificateUrl } from "@/lib/food-safety-files";
@@ -9,10 +9,11 @@ import { signedCertificateUrl } from "@/lib/food-safety-files";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
   if (!canViewFoodSafety(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
-  const { data: record } = await supabase.from("fs_training_record").select("staff_id, certificate_ref").eq("id", id).single();
+  const { data: record } = await db.from("fs_training_record").select("staff_id, certificate_ref").eq("id", id).single();
   if (!record || !record.certificate_ref) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const isOwn = record.staff_id === session.id;

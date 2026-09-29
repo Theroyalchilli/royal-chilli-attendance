@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb, staffWorksAt } from "@/lib/business-db";
 import { requireManager } from "@/lib/guard";
 import { getAttendanceSettings, localDateString, localIsoWeekday } from "@/lib/settings";
 
@@ -34,7 +34,9 @@ function rangeFor(range: string, anchor: string): { from: string; to: string } {
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
   const staffId = Number((await params).id);
+  if (!(await staffWorksAt(db, staffId))) return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
 
   const settings = await getAttendanceSettings();
   const { searchParams } = new URL(req.url);
@@ -42,7 +44,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const anchor = searchParams.get("date") || localDateString(new Date(), settings.timezone);
   const { from, to } = rangeFor(range, anchor);
 
-  const { data: staff, error: staffErr } = await supabase
+  const { data: staff, error: staffErr } = await db
     .from("staff")
     .select(
       "id, name, role, employee_number, employment_type, pay_rate, active, rota_start, rota_end, rota_working_days, rota_break_minutes, rota_grace_minutes",
@@ -51,16 +53,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     .maybeSingle();
   if (staffErr || !staff) return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   // split-shift second slot (POS migration 066) — skipped if not migrated yet
-  const second = await supabase.from("staff").select("rota_start_2, rota_end_2").eq("id", staffId).maybeSingle();
+  const second = await db.from("staff").select("rota_start_2, rota_end_2").eq("id", staffId).maybeSingle();
   if (!second.error && second.data) Object.assign(staff, second.data);
 
   const [{ data: attendance }, { data: shifts }, { data: corrections }, { data: leave }, { data: entries }] =
     await Promise.all([
-      supabase.from("attendance").select("*").eq("staff_id", staffId).gte("work_date", from).lte("work_date", to).order("work_date"),
-      supabase.from("shifts").select("shift_date").eq("staff_id", staffId).gte("shift_date", from).lte("shift_date", to).neq("status", "cancelled"),
-      supabase.from("attendance_corrections").select("*").eq("staff_id", staffId).order("created_at", { ascending: false }).limit(20),
-      supabase.from("leave_requests").select("start_date, end_date").eq("staff_id", staffId).eq("status", "approved").lte("start_date", to).gte("end_date", from),
-      supabase
+      db.from("attendance").select("*").eq("staff_id", staffId).gte("work_date", from).lte("work_date", to).order("work_date"),
+      db.from("shifts").select("shift_date").eq("staff_id", staffId).gte("shift_date", from).lte("shift_date", to).neq("status", "cancelled"),
+      db.from("attendance_corrections").select("*").eq("staff_id", staffId).order("created_at", { ascending: false }).limit(20),
+      db.from("leave_requests").select("start_date, end_date").eq("staff_id", staffId).eq("status", "approved").lte("start_date", to).gte("end_date", from),
+      db
         .from("payroll_entries")
         .select("id, payroll_period_id, hours_worked, gross_pay, paid_amount, status, created_at, payroll_periods(period_start, period_end)")
         .eq("staff_id", staffId)
@@ -103,7 +105,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const weekday0 = new Date(anchor + "T12:00:00Z").getUTCDay();
   const weekFrom = addDays(anchor, weekday0 === 0 ? -6 : 1 - weekday0);
   const weekTo = addDays(weekFrom, 6);
-  const { data: timesheet } = await supabase
+  const { data: timesheet } = await db
     .from("timesheets")
     .select("*")
     .eq("staff_id", staffId)
@@ -117,7 +119,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   type PaymentRow = { payroll_entry_id: number; amount: number; method: string | null; paid_at: string; notes: string | null };
   const payments: PaymentRow[] = entryIds.length
     ? ((
-        await supabase
+        await db
           .from("payroll_payments")
           .select("payroll_entry_id, amount, method, paid_at, notes")
           .in("payroll_entry_id", entryIds)

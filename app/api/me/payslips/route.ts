@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -9,8 +9,9 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
 
-  const { data: entries } = await supabase
+  const { data: entries } = await db
     .from("payroll_entries")
     .select("id, payroll_period_id, hours_worked, gross_pay, paid_amount, status, created_at, payroll_periods(period_start, period_end)")
     .eq("staff_id", session.id)
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
   const ids = list.map((e) => e.id);
   const payments: PaymentRow[] = ids.length
     ? ((
-        await supabase
+        await db
           .from("payroll_payments")
           .select("payroll_entry_id, amount, method, paid_at, notes")
           .in("payroll_entry_id", ids)

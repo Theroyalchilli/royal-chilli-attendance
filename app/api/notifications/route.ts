@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -8,8 +8,9 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
 
-  const { data } = await supabase
+  const { data } = await db
     .from("notifications")
     .select("id, type, title, message, message_id, link, read_at, created_at")
     .eq("staff_id", session.id)
@@ -26,16 +27,17 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
 
   const body = await req.json().catch(() => ({}));
   const now = new Date().toISOString();
   if (body.delete) {
-    const { data: row } = await supabase.from("notifications").select("read_at").eq("id", Number(body.delete)).eq("staff_id", session.id).maybeSingle();
+    const { data: row } = await db.from("notifications").select("read_at").eq("id", Number(body.delete)).eq("staff_id", session.id).maybeSingle();
     if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    await supabase.from("notifications").update({ deleted_at: now, read_at: row.read_at ?? now }).eq("id", Number(body.delete)).eq("staff_id", session.id);
+    await db.from("notifications").update({ deleted_at: now, read_at: row.read_at ?? now }).eq("id", Number(body.delete)).eq("staff_id", session.id);
     return NextResponse.json({ success: true });
   }
-  let q = supabase.from("notifications").update({ read_at: now }).eq("staff_id", session.id).is("read_at", null);
+  let q = db.from("notifications").update({ read_at: now }).eq("staff_id", session.id).is("read_at", null);
   if (!body.all) {
     if (!body.id) return NextResponse.json({ error: "id or all required" }, { status: 400 });
     q = q.eq("id", Number(body.id));

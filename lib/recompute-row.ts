@@ -16,7 +16,7 @@ export async function recomputeAndSave(attendanceId: number): Promise<Record<str
   const settings = await getAttendanceSettings();
   const rota = await loadStaffRota(row.staff_id);
 
-  const sched = await resolveScheduleFor(row.staff_id, row.work_date, rota, settings);
+  const sched = await resolveScheduleFor(row.business_id, row.staff_id, row.work_date, rota, settings);
 
   const { patch } = recompute(
     {

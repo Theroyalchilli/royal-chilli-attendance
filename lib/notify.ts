@@ -52,10 +52,10 @@ export async function notify(staffId: number, type: NotifType, message: string, 
   }
 }
 
-/** Notify everyone who can act on manager things (manager / hr / admin). */
-export async function notifyManagers(type: NotifType, message: string, link?: string): Promise<void> {
+/** Notify everyone at this business who can act on manager things (manager / hr / admin). */
+export async function notifyManagers(businessId: number, type: NotifType, message: string, link?: string): Promise<void> {
   try {
-    const ids = await managerIds();
+    const ids = await managerIds(businessId);
     if (!ids.length) return;
     const { data } = await supabase
       .from("notifications")

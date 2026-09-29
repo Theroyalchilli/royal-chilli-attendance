@@ -1,4 +1,6 @@
 import supabase from "./supabase";
+import { bizDb } from "./business-db";
+import { staffIdsAt } from "./business";
 import { sendPush } from "./push";
 import { withNid } from "./notification-prefs";
 import { getAttendanceSettings, localDateString } from "./settings";
@@ -16,8 +18,8 @@ export const AUDIENCE_LABEL: Record<Audience, string> = {
 };
 
 /** Who a message goes to right now (active staff only). */
-export async function recipientsFor(audience: Audience, staffIds: number[] = []): Promise<number[]> {
-  const { data: active } = await supabase.from("staff").select("id, role").eq("active", 1);
+export async function recipientsFor(businessId: number, audience: Audience, staffIds: number[] = []): Promise<number[]> {
+  const { data: active } = await supabase.from("staff").select("id, role").eq("active", 1).in("id", await staffIdsAt(businessId));
   const all = (active ?? []) as { id: number; role: string }[];
   if (audience === "everyone") return all.map((s) => s.id);
   if (audience === "managers") return all.filter((s) => ["manager", "hr", "admin"].includes(s.role)).map((s) => s.id);
@@ -29,8 +31,8 @@ export async function recipientsFor(audience: Audience, staffIds: number[] = [])
   const settings = await getAttendanceSettings();
   const today = localDateString(new Date(), settings.timezone);
   const [{ data: shifts }, { data: open }] = await Promise.all([
-    supabase.from("shifts").select("staff_id").eq("shift_date", today).neq("status", "cancelled"),
-    supabase.from("attendance").select("staff_id").is("clock_out", null).not("clock_in", "is", null),
+    bizDb(businessId).from("shifts").select("staff_id").eq("shift_date", today).neq("status", "cancelled"),
+    bizDb(businessId).from("attendance").select("staff_id").is("clock_out", null).not("clock_in", "is", null),
   ]);
   const ok = new Set(all.map((s) => s.id));
   return [...new Set([...(shifts ?? []), ...(open ?? [])].map((r) => r.staff_id))].filter((id) => ok.has(id));
@@ -43,7 +45,7 @@ export async function phonesOn(staffIds: number[]): Promise<number> {
   return new Set((data ?? []).map((r) => r.staff_id)).size;
 }
 
-type MessageRow = { id: number; title: string; body: string; audience: Audience; staff_ids: number[] | null };
+type MessageRow = { id: number; business_id: number; title: string; body: string; audience: Audience; staff_ids: number[] | null };
 
 /** Deliver one message (claimed first, so it can never go twice). */
 export async function deliverMessage(id: number): Promise<{ recipients: number; phones: number } | null> {
@@ -53,11 +55,11 @@ export async function deliverMessage(id: number): Promise<{ recipients: number; 
     .eq("id", id)
     .is("sent_at", null)
     .is("cancelled_at", null)
-    .select("id, title, body, audience, staff_ids")
+    .select("id, business_id, title, body, audience, staff_ids")
     .maybeSingle();
   if (!claimed) return null;
   const m = claimed as MessageRow;
-  const ids = await recipientsFor(m.audience, m.staff_ids ?? []);
+  const ids = await recipientsFor(m.business_id, m.audience, m.staff_ids ?? []);
   // bell rows first; each phone alert links with its own id (?nid=) so
   // tapping it opens the message and marks it read
   const { data: rows } = ids.length

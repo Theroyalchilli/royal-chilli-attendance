@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { canLogFoodSafety } from "@/lib/food-safety-permissions";
 
@@ -8,6 +8,7 @@ import { canLogFoodSafety } from "@/lib/food-safety-permissions";
 export async function POST(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
   if (!canLogFoodSafety(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { check_type_id, ok, problem_note } = await req.json().catch(() => ({}));
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "A note is required when a check fails" }, { status: 400 });
   }
 
-  const { error } = await supabase.from("fs_check_log").insert({
+  const { error } = await db.from("fs_check_log").insert({
     check_type_id,
     staff_id: session.id,
     ok,

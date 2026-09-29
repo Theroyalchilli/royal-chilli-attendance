@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
+import { staffIdsAt } from "@/lib/business";
 import { requireManager } from "@/lib/guard";
 import { alertRotaReady } from "@/lib/rota-alerts";
 import { localIsoWeekday, getAttendanceSettings, localDateString } from "@/lib/settings";
@@ -19,6 +20,7 @@ const hhmm = (t: string | null) => (t ? t.slice(0, 5) : null);
 export async function POST(req: NextRequest) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
 
   const { week_start: weekStart, mode } = await req.json();
   if (!weekStart) return NextResponse.json({ error: "week_start required" }, { status: 400 });
@@ -31,13 +33,13 @@ export async function POST(req: NextRequest) {
 
   // second slot = split-shift pattern (POS migration 066); fall back without it
   const cols = "id, rota_start, rota_end, rota_working_days";
-  const withSecond = await supabase.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1);
-  const staff = (withSecond.error ? (await supabase.from("staff").select(cols).eq("active", 1)).data : withSecond.data) as
+  const withSecond = await db.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1).in("id", await staffIdsAt(g.session.businessId));
+  const staff = (withSecond.error ? (await db.from("staff").select(cols).eq("active", 1).in("id", await staffIdsAt(g.session.businessId))).data : withSecond.data) as
     | { id: number; rota_start: string | null; rota_end: string | null; rota_start_2?: string | null; rota_end_2?: string | null; rota_working_days: number[] | null }[]
     | null;
 
   // never overwrite an existing shift for a staff+date
-  const { data: existing } = await supabase
+  const { data: existing } = await db
     .from("shifts")
     .select("staff_id, shift_date")
     .gte("shift_date", days[0])
@@ -46,7 +48,7 @@ export async function POST(req: NextRequest) {
   const taken = new Set((existing ?? []).map((s) => `${s.staff_id}:${s.shift_date}`));
 
   // never schedule over approved leave
-  const { data: leave } = await supabase
+  const { data: leave } = await db
     .from("leave_requests")
     .select("staff_id, start_date, end_date")
     .eq("status", "approved")
@@ -68,7 +70,7 @@ export async function POST(req: NextRequest) {
     const prevStart = new Date(weekStart + "T12:00:00Z");
     prevStart.setUTCDate(prevStart.getUTCDate() - 7);
     const prev = weekDays(prevStart.toISOString().slice(0, 10));
-    const { data: prevShifts } = await supabase
+    const { data: prevShifts } = await db
       .from("shifts")
       .select("staff_id, shift_date, start_time, end_time")
       .gte("shift_date", prev[0])
@@ -115,7 +117,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (inserts.length > 0) {
-    const { error } = await supabase.from("shifts").insert(inserts);
+    const { error } = await db.from("shifts").insert(inserts);
     if (error) return NextResponse.json({ error: "Failed to write shifts" }, { status: 500 });
     await alertRotaReady(inserts);
   }

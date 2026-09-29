@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { canViewFoodSafety } from "@/lib/food-safety-permissions";
 
@@ -12,11 +12,12 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
   if (!canViewFoodSafety(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const [{ data: courses }, { data: records }] = await Promise.all([
-    supabase.from("fs_course").select("*").eq("active", true).order("name"),
-    supabase
+    db.from("fs_course").select("*").eq("active", true).order("name"),
+    db
       .from("fs_training_record")
       .select("id, course_id, level, date_done, trainer, certificate_ref, created_at")
       .eq("staff_id", session.id)

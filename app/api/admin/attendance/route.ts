@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
+import { staffIdsAt } from "@/lib/business";
 import { requireManager } from "@/lib/guard";
 import { getAttendanceSettings, localDateString } from "@/lib/settings";
 import { loadStaffRota, resolveScheduleFor } from "@/lib/rota";
@@ -12,30 +13,31 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
 
   const { searchParams } = new URL(req.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const staffId = searchParams.get("staff_id");
 
-  let q = supabase.from("attendance").select("*").order("work_date", { ascending: false }).order("clock_in");
+  let q = db.from("attendance").select("*").order("work_date", { ascending: false }).order("clock_in");
   if (from) q = q.gte("work_date", from);
   if (to) q = q.lte("work_date", to);
   if (staffId) q = q.eq("staff_id", Number(staffId));
 
-  let shiftsQ = supabase.from("shifts").select("id, staff_id, shift_date, start_time, end_time").neq("status", "cancelled");
+  let shiftsQ = db.from("shifts").select("id, staff_id, shift_date, start_time, end_time").neq("status", "cancelled");
   if (from) shiftsQ = shiftsQ.gte("shift_date", from);
   if (to) shiftsQ = shiftsQ.lte("shift_date", to);
   if (staffId) shiftsQ = shiftsQ.eq("staff_id", Number(staffId));
 
   const [{ data: rows, error }, { data: staff }, { data: shifts }, settings, { data: openRows }] = await Promise.all([
     q,
-    supabase.from("staff").select("id, name").eq("active", 1).order("name"),
+    db.from("staff").select("id, name").eq("active", 1).in("id", await staffIdsAt(g.session.businessId)).order("name"),
     shiftsQ,
     getAttendanceSettings(),
     // Every currently-open shift, any date — used to catch a forgotten
     // clock-out from a day outside whatever range is being viewed right now.
-    supabase.from("attendance").select("staff_id, clock_in").is("clock_out", null).not("clock_in", "is", null),
+    db.from("attendance").select("staff_id, clock_in").is("clock_out", null).not("clock_in", "is", null),
   ]);
   if (error) return NextResponse.json({ error: "Failed to load" }, { status: 500 });
 
@@ -109,6 +111,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
 
   const body = await req.json();
   const staffId = Number(body.staff_id);
@@ -122,7 +125,7 @@ export async function POST(req: NextRequest) {
   const settings = await getAttendanceSettings();
   const rota = await loadStaffRota(staffId);
   // split-shift day: the entry belongs to the shift nearest its clock-in
-  const sched = await resolveScheduleFor(staffId, workDate, rota, settings, new Date(clockIn));
+  const sched = await resolveScheduleFor(g.session.businessId, staffId, workDate, rota, settings, new Date(clockIn));
 
   const { patch } = recompute(
     {
@@ -138,7 +141,7 @@ export async function POST(req: NextRequest) {
     settings,
   );
 
-  const { data: inserted, error } = await supabase
+  const { data: inserted, error } = await db
     .from("attendance")
     .insert({
       staff_id: staffId,

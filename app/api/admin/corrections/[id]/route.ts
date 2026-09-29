@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { requireManager } from "@/lib/guard";
 import { recomputeAndSave } from "@/lib/recompute-row";
 import { audit } from "@/lib/attendance-write";
@@ -17,15 +17,16 @@ const APPLIABLE = new Set([
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
   const id = Number((await params).id);
   const { action, review_note } = await req.json();
 
-  const { data: corr } = await supabase.from("attendance_corrections").select("*").eq("id", id).maybeSingle();
+  const { data: corr } = await db.from("attendance_corrections").select("*").eq("id", id).maybeSingle();
   if (!corr) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (corr.status !== "pending") return NextResponse.json({ error: "Already reviewed" }, { status: 409 });
 
   if (action === "reject") {
-    await supabase
+    await db
       .from("attendance_corrections")
       .update({ status: "rejected", reviewed_by: g.session.id, reviewed_at: new Date().toISOString(), review_note: review_note || null })
       .eq("id", id);
@@ -47,12 +48,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     else patch[k] = v;
   }
 
-  const { data: attBefore } = await supabase.from("attendance").select("*").eq("id", corr.attendance_id).maybeSingle();
+  const { data: attBefore } = await db.from("attendance").select("*").eq("id", corr.attendance_id).maybeSingle();
   patch.updated_at = new Date().toISOString();
-  await supabase.from("attendance").update(patch).eq("id", corr.attendance_id);
+  await db.from("attendance").update(patch).eq("id", corr.attendance_id);
   const updated = await recomputeAndSave(corr.attendance_id);
 
-  await supabase
+  await db
     .from("attendance_corrections")
     .update({ status: "approved", reviewed_by: g.session.id, reviewed_at: new Date().toISOString(), review_note: review_note || null })
     .eq("id", id);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { canViewTrace } from "@/lib/food-safety-permissions";
 
@@ -11,9 +11,10 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
   if (!canViewTrace(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { data } = await supabase
+  const { data } = await db
     .from("suppliers")
     .select("id, name, contact_name, phone, approved, docs_status, active")
     .eq("active", 1)

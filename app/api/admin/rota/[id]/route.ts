@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { requireManager } from "@/lib/guard";
 import { audit } from "@/lib/attendance-write";
 import { getAttendanceSettings, localDateString } from "@/lib/settings";
@@ -9,9 +9,10 @@ import { alertShiftRemoved } from "@/lib/rota-alerts";
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
   const id = Number((await params).id);
 
-  const { data: shift } = await supabase.from("shifts").select("staff_id, shift_date, start_time, end_time").eq("id", id).maybeSingle();
+  const { data: shift } = await db.from("shifts").select("staff_id, shift_date, start_time, end_time").eq("id", id).maybeSingle();
   if (!shift) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const settings = await getAttendanceSettings();
@@ -20,7 +21,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ error: "Can't change a shift for a date that's already passed" }, { status: 400 });
   }
 
-  const { error } = await supabase.from("shifts").delete().eq("id", id);
+  const { error } = await db.from("shifts").delete().eq("id", id);
   if (error) return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   await audit(g.session.id, "rota_shift_delete", id, null, null);
   await alertShiftRemoved(shift.staff_id, shift.shift_date, shift.start_time, shift.end_time);

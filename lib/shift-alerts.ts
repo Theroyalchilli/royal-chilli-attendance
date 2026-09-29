@@ -15,7 +15,7 @@ export const LATE_AFTER_MIN = 5;
 export const CLOCK_OUT_AFTER_MIN = 10;
 
 export type AlertKind = "before_start" | "not_clocked_in" | "forgot_clock_out";
-export type ShiftRow = { id: number; staff_id: number; shift_date: string; start_time: string; end_time: string };
+export type ShiftRow = { id: number; staff_id: number; shift_date: string; start_time: string; end_time: string; business_id?: number };
 export type AttRow = { staff_id: number; shift_id: number | null; clock_in: string | null; clock_out: string | null };
 export type DueAlert = { shift: ShiftRow; kind: AlertKind; start: Date; end: Date };
 

@@ -77,7 +77,9 @@ export async function audit(
   newValue: unknown,
 ) {
   try {
+    const row = (newValue ?? oldValue) as { business_id?: number } | null;
     await supabase.from("audit_logs").insert({
+      ...(row?.business_id ? { business_id: row.business_id } : {}),
       staff_id: staffId,
       action,
       entity_type: "attendance",

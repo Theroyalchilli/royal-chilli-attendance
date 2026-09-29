@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { getAttendanceSettings, localDateString } from "@/lib/settings";
 import { forgottenClockOut, loadStaffRota, resolveScheduleFor, scheduleSlotsFor, type StaffRota } from "@/lib/rota";
@@ -17,13 +17,13 @@ const hm = (d: Date, tz: string) =>
 /** Today's slots + the next one if `open` is a forgotten clock-out from an earlier shift. */
 async function checkForgotten(
   staffId: number,
-  open: { clock_in: string; scheduled_end: string | null },
+  open: { clock_in: string; scheduled_end: string | null; business_id: number },
   rota: StaffRota,
   settings: AttendanceSettings,
   now: Date,
 ) {
   if (!open.scheduled_end) return null;
-  const slots = await scheduleSlotsFor(staffId, localDateString(now, settings.timezone), rota, settings);
+  const slots = await scheduleSlotsFor(open.business_id, staffId, localDateString(now, settings.timezone), rota, settings);
   return forgottenClockOut(open, slots, now);
 }
 
@@ -31,10 +31,11 @@ async function checkForgotten(
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
 
-  const { data: open } = await supabase
+  const { data: open } = await db
     .from("attendance")
-    .select("id, clock_in, scheduled_end, net_work_seconds")
+    .select("id, clock_in, scheduled_end, net_work_seconds, business_id")
     .eq("staff_id", session.id)
     .is("clock_out", null)
     .not("clock_in", "is", null)
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getSessionFromRequest(req);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const db = bizDb(session.businessId);
 
     const body = (await req.json()) as Body;
     const lat = typeof body.lat === "number" ? body.lat : null;
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
 
     const rota = await loadStaffRota<{ name: string }>(session.id, "name");
 
-    const { data: openRow } = await supabase
+    const { data: openRow } = await db
       .from("attendance")
       .select("*")
       .eq("staff_id", session.id)
@@ -98,7 +100,7 @@ export async function POST(req: NextRequest) {
     let autoClosed: string | null = null;
     if (openRow && (await checkForgotten(session.id, openRow, rota, settings, now))) {
       const closeAt = openRow.scheduled_end as string;
-      const sched = await resolveScheduleFor(session.id, openRow.work_date, rota, settings);
+      const sched = await resolveScheduleFor(openRow.business_id, session.id, openRow.work_date, rota, settings);
       const { patch } = recompute(
         {
           clockIn: openRow.clock_in,
@@ -114,7 +116,7 @@ export async function POST(req: NextRequest) {
       );
       const closeHM = hm(new Date(closeAt), settings.timezone);
       const note = `[auto ${localDateString(now, settings.timezone)}] forgot to clock out — closed at scheduled end ${closeHM} when clocking in for next shift. Check.`;
-      const { data: closed, error: closeErr } = await supabase
+      const { data: closed, error: closeErr } = await db
         .from("attendance")
         .update({
           clock_out: closeAt,
@@ -134,6 +136,7 @@ ${note}` : note,
       await audit(session.id, "auto_close_forgotten_clockout", openRow.id, openRow, closed);
       await notify(session.id, "missed_clockout", `You didn't clock out — we set it to ${closeHM} for your manager to check.`, "/me/attendance");
       await notifyManagers(
+        openRow.business_id,
         "missed_clockout",
         `${rota.name ?? "Someone"} didn't clock out — set to ${closeHM}, please check.`,
         `/admin/attendance?staff_id=${session.id}&date=${openRow.work_date}&open=${openRow.id}`,
@@ -141,7 +144,7 @@ ${note}` : note,
       autoClosed = closeHM;
     } else if (openRow) {
       // ---- CLOCK OUT ----
-      const sched = await resolveScheduleFor(session.id, openRow.work_date, rota, settings);
+      const sched = await resolveScheduleFor(openRow.business_id, session.id, openRow.work_date, rota, settings);
       const photoPath = await storeClockPhoto(body.photo, { staffId: session.id, leg: "out", workMonth: openRow.work_date.slice(0, 7) });
       const { patch } = recompute(
         {
@@ -156,7 +159,7 @@ ${note}` : note,
         },
         settings,
       );
-      const { data: updated, error } = await supabase
+      const { data: updated, error } = await db
         .from("attendance")
         .update({
           clock_out: now.toISOString(),
@@ -181,7 +184,7 @@ ${note}` : note,
     // ---- CLOCK IN ----
     const workDate = localDateString(now, settings.timezone);
     // split-shift day: pick the shift this clock-in belongs to (nearest start)
-    const sched = await resolveScheduleFor(session.id, workDate, rota, settings, now);
+    const sched = await resolveScheduleFor(session.businessId, session.id, workDate, rota, settings, now);
     const photoPath = await storeClockPhoto(body.photo, { staffId: session.id, leg: "in", workMonth: workDate.slice(0, 7) });
     const { patch } = recompute(
       {
@@ -198,7 +201,8 @@ ${note}` : note,
       settings,
     );
 
-    const { data: inserted, error } = await supabase
+    // Clocking in: at the business this login is working for.
+    const { data: inserted, error } = await bizDb(session.businessId)
       .from("attendance")
       .insert({
         staff_id: session.id,

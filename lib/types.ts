@@ -5,6 +5,8 @@ export type SessionUser = {
   id: number;
   name: string;
   role: StaffRole;
+  /** The business this login is working for (shared with royal-chilli-pos). */
+  businessId: number;
 };
 
 export type ClockMethod = "kiosk" | "web" | "qr" | "manual";

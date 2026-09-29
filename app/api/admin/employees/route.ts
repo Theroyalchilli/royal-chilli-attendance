@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
+import { staffIdsAt } from "@/lib/business";
 import { requireManager } from "@/lib/guard";
 
 export const dynamic = "force-dynamic";
@@ -12,15 +13,17 @@ const ROLE_ORDER: Record<string, number> = { admin: 0, hr: 1, manager: 2, employ
 export async function GET(req: NextRequest) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
 
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q")?.trim() ?? "";
   const role = searchParams.get("role")?.trim() ?? "";
   const active = searchParams.get("active") ?? "1";
 
-  let query = supabase
+  let query = db
     .from("staff")
     .select("id, name, role, employee_number, employment_type, pay_rate, active")
+    .in("id", await staffIdsAt(g.session.businessId))
     .order("name");
   if (active !== "all") query = query.eq("active", active === "0" ? 0 : 1);
   if (role) query = query.eq("role", role);

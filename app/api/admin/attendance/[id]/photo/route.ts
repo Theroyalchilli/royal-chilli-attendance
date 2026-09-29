@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { requireManager } from "@/lib/guard";
 import { signedPhotoUrl } from "@/lib/photo";
 
@@ -7,10 +7,11 @@ import { signedPhotoUrl } from "@/lib/photo";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
   const id = Number((await params).id);
   const leg = new URL(req.url).searchParams.get("leg") === "out" ? "out" : "in";
 
-  const { data } = await supabase
+  const { data } = await db
     .from("attendance")
     .select("clock_in_photo, clock_out_photo")
     .eq("id", id)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { canViewTrace, canEditTrace } from "@/lib/food-safety-permissions";
 
@@ -10,9 +10,10 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
   if (!canViewTrace(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { data } = await supabase
+  const { data } = await db
     .from("fs_delivery_check")
     .select("id, item, temp_value, accepted, corrective_action, created_at, supplier:suppliers(name), staff:staff(name)")
     .order("created_at", { ascending: false })
@@ -24,6 +25,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
   if (!canEditTrace(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { supplier_id, item, temp_value, accepted, corrective_action, purchase_order_id } = await req.json().catch(() => ({}));
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "A corrective action is required when a delivery is refused" }, { status: 400 });
   }
 
-  const { error } = await supabase.from("fs_delivery_check").insert({
+  const { error } = await db.from("fs_delivery_check").insert({
     supplier_id,
     purchase_order_id: purchase_order_id || null,
     item: String(item).trim(),

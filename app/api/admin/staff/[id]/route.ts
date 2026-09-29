@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb, staffWorksAt } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { canManageAttendance } from "@/lib/permissions";
 import { audit } from "@/lib/attendance-write";
@@ -9,7 +9,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!session || !canManageAttendance(session.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const db = bizDb(session.businessId);
   const staffId = Number((await params).id);
+  if (!(await staffWorksAt(db, staffId))) return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
   const body = await req.json();
   const patch: Record<string, unknown> = {};
 
@@ -38,7 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
-  const { error } = await supabase.from("staff").update(patch).eq("id", staffId);
+  const { error } = await db.from("staff").update(patch).eq("id", staffId);
   if (error) {
     const needsMigration = "rota_start_2" in patch && /rota_start_2|rota_end_2/.test(error.message);
     return NextResponse.json(

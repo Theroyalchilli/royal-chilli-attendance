@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { notifyManagers } from "@/lib/notify";
 import { getAttendanceSettings, localDateString } from "@/lib/settings";
@@ -10,18 +10,19 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
   const settings = await getAttendanceSettings();
   const today = localDateString(new Date(), settings.timezone);
 
   const [{ data: mine }, { data: recentRows }] = await Promise.all([
-    supabase
+    db
       .from("attendance_corrections")
       .select("id, attendance_id, requested_change, reason, status, review_note, created_at, reviewed_at")
       .eq("staff_id", session.id)
       .order("created_at", { ascending: false }),
-    supabase
+    db
       .from("attendance")
       .select("id, work_date, clock_in, clock_out")
       .eq("staff_id", session.id)
@@ -44,6 +45,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
 
   const body = await req.json();
   let attendanceId = Number(body.attendance_id);
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
     // correction request to; the manager's approval flow fills in the times.
     const settings = await getAttendanceSettings();
     const today = localDateString(new Date(), settings.timezone);
-    const { data: created, error: createErr } = await supabase
+    const { data: created, error: createErr } = await db
       .from("attendance")
       .insert({ staff_id: session.id, work_date: today, status: "not_started", approval_status: "pending" })
       .select("*")
@@ -69,7 +71,7 @@ export async function POST(req: NextRequest) {
     row = created;
     attendanceId = created.id;
   } else {
-    const { data: existingRow } = await supabase
+    const { data: existingRow } = await db
       .from("attendance")
       .select("*")
       .eq("id", attendanceId)
@@ -87,7 +89,7 @@ export async function POST(req: NextRequest) {
   }
 
   // one open request per attendance row
-  const { data: existing } = await supabase
+  const { data: existing } = await db
     .from("attendance_corrections")
     .select("id")
     .eq("attendance_id", attendanceId)
@@ -97,7 +99,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "You already have a pending request for that day" }, { status: 409 });
   }
 
-  const { error } = await supabase.from("attendance_corrections").insert({
+  const { error } = await db.from("attendance_corrections").insert({
     attendance_id: attendanceId,
     staff_id: session.id,
     original_snapshot: row,
@@ -107,6 +109,6 @@ export async function POST(req: NextRequest) {
   });
   if (error) return NextResponse.json({ error: "Couldn't submit" }, { status: 500 });
 
-  await notifyManagers("correction_submitted", `${session.name} raised a correction for ${row!.work_date}.`, "/admin/corrections");
+  await notifyManagers(session.businessId, "correction_submitted", `${session.name} raised a correction for ${row!.work_date}.`, "/admin/corrections");
   return NextResponse.json({ success: true }, { status: 201 });
 }

@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   const { data: shifts } = await supabase
     .from("shifts")
-    .select("id, staff_id, shift_date, start_time, end_time")
+    .select("id, staff_id, shift_date, start_time, end_time, business_id")
     .in("shift_date", [yesterday, today])
     .neq("status", "cancelled");
   // scheduled staff messages due by now
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
       await notify(who, "shift_reminder", `Your shift starts at ${hm(a.start)} — don't forget to clock in.`, "/me");
     } else if (a.kind === "not_clocked_in") {
       await notify(who, "not_clocked_in", `You haven't clocked in for your ${hm(a.start)} shift.`, "/me");
-      await notifyManagers("not_clocked_in", `${name} hasn't clocked in — ${hm(a.start)} shift.`, `/admin/attendance?staff_id=${who}&date=${a.shift.shift_date}`);
+      await notifyManagers(a.shift.business_id ?? 1, "not_clocked_in", `${name} hasn't clocked in — ${hm(a.start)} shift.`, `/admin/attendance?staff_id=${who}&date=${a.shift.shift_date}`);
     } else {
       await notify(who, "clock_out_reminder", `Did you forget to clock out? Your shift ended at ${hm(a.end)}.`, "/me");
     }

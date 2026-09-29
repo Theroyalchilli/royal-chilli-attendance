@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
 
   const { current_password, new_password } = await req.json();
   if (!current_password || !new_password) {
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "New password must be at least 8 characters" }, { status: 400 });
   }
 
-  const { data: staff, error } = await supabase
+  const { data: staff, error } = await db
     .from("staff")
     .select("id, password_hash")
     .eq("id", session.id)
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
   }
 
   const password_hash = await bcrypt.hash(new_password, 10);
-  const { error: updateErr } = await supabase.from("staff").update({ password_hash }).eq("id", session.id);
+  const { error: updateErr } = await db.from("staff").update({ password_hash }).eq("id", session.id);
   if (updateErr) return NextResponse.json({ error: "Failed to update password" }, { status: 500 });
 
   return NextResponse.json({ success: true });

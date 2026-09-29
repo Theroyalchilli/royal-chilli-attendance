@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { requireManager } from "@/lib/guard";
 import { decimalHours, clockTime } from "@/lib/format";
 
@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
 
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type") ?? "hours";
@@ -17,14 +18,14 @@ export async function GET(req: NextRequest) {
   const staffId = searchParams.get("staff_id");
   const format = searchParams.get("format") ?? "json";
 
-  let q = supabase.from("attendance").select("*").order("work_date").order("staff_id");
+  let q = db.from("attendance").select("*").order("work_date").order("staff_id");
   if (from) q = q.gte("work_date", from);
   if (to) q = q.lte("work_date", to);
   if (staffId) q = q.eq("staff_id", Number(staffId));
 
   const [{ data: rows }, { data: staff }] = await Promise.all([
     q,
-    supabase.from("staff").select("id, name"),
+    db.from("staff").select("id, name"),
   ]);
   const nameById = new Map((staff ?? []).map((s) => [s.id, s.name]));
 

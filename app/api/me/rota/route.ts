@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { loadStaffRota } from "@/lib/rota";
 
@@ -18,13 +18,14 @@ function weekDays(weekStart: string) {
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
 
   const weekStart = new URL(req.url).searchParams.get("week_start");
   if (!weekStart) return NextResponse.json({ error: "week_start required" }, { status: 400 });
   const days = weekDays(weekStart);
 
   const [{ data: shifts }, me, { data: leave }] = await Promise.all([
-    supabase
+    db
       .from("shifts")
       .select("shift_date, start_time, end_time")
       .order("start_time")
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
       .lte("shift_date", days[6])
       .neq("status", "cancelled"),
     loadStaffRota(session.id),
-    supabase
+    db
       .from("leave_requests")
       .select("start_date, end_date, leave_type")
       .eq("staff_id", session.id)

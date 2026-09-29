@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
+import { staffIdsAt } from "@/lib/business";
 import { requireManager } from "@/lib/guard";
 import { getAttendanceSettings, localDateString } from "@/lib/settings";
 import { classifyShiftStatus } from "@/lib/shift-status";
@@ -17,6 +18,7 @@ function daysBack(n: number, tz: string): string[] {
 export async function GET(req: NextRequest) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
 
   const settings = await getAttendanceSettings();
   const tz = settings.timezone;
@@ -52,29 +54,29 @@ export async function GET(req: NextRequest) {
     fsCourses,
     fsTrainingRecords,
   ] = await Promise.all([
-    supabase.from("staff").select("id, name, role").eq("active", 1),
-    supabase.from("shifts").select("id, staff_id, start_time, end_time, position").eq("shift_date", today).neq("status", "cancelled"),
-    supabase.from("attendance").select("staff_id, shift_id, clock_in, clock_out, late_seconds").eq("work_date", today),
-    supabase.from("attendance").select("id, staff_id, clock_in").is("clock_out", null).not("clock_in", "is", null),
-    supabase.from("leave_requests").select("staff_id").eq("status", "approved").lte("start_date", today).gte("end_date", today),
-    supabase
+    db.from("staff").select("id, name, role").eq("active", 1).in("id", await staffIdsAt(g.session.businessId)),
+    db.from("shifts").select("id, staff_id, start_time, end_time, position").eq("shift_date", today).neq("status", "cancelled"),
+    db.from("attendance").select("staff_id, shift_id, clock_in, clock_out, late_seconds").eq("work_date", today),
+    db.from("attendance").select("id, staff_id, clock_in").is("clock_out", null).not("clock_in", "is", null),
+    db.from("leave_requests").select("staff_id").eq("status", "approved").lte("start_date", today).gte("end_date", today),
+    db
       .from("attendance_corrections")
       .select("id, staff_id, original_snapshot, requested_change, status, created_at")
       .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(5),
-    supabase
+    db
       .from("attendance")
       .select("staff_id, net_work_seconds, overtime_seconds, clock_out")
       .gte("work_date", weekStart)
       .lte("work_date", today),
-    supabase.from("attendance").select("staff_id, work_date, clock_in").gte("work_date", weekStart).lte("work_date", today).not("clock_in", "is", null),
-    includeFoodSafety ? supabase.from("fs_check_type").select("id", { count: "exact", head: true }).eq("active", true) : Promise.resolve({ count: 0 }),
-    includeFoodSafety ? supabase.from("fs_check_log").select("check_type_id, ok").gte("created_at", dayStart).lte("created_at", dayEnd) : Promise.resolve({ data: [] }),
-    includeFoodSafety ? supabase.from("fs_temp_log").select("pass").gte("created_at", dayStart).lte("created_at", dayEnd) : Promise.resolve({ data: [] }),
-    includeFoodSafety ? supabase.from("fs_signoff").select("id").eq("day", today).maybeSingle() : Promise.resolve({ data: null }),
-    includeFoodSafety ? supabase.from("fs_course").select("id, refresh_months").eq("active", true) : Promise.resolve({ data: [] }),
-    includeFoodSafety ? supabase.from("fs_training_record").select("staff_id, course_id, date_done").order("date_done", { ascending: false }) : Promise.resolve({ data: [] }),
+    db.from("attendance").select("staff_id, work_date, clock_in").gte("work_date", weekStart).lte("work_date", today).not("clock_in", "is", null),
+    includeFoodSafety ? db.from("fs_check_type").select("id", { count: "exact", head: true }).eq("active", true) : Promise.resolve({ count: 0 }),
+    includeFoodSafety ? db.from("fs_check_log").select("check_type_id, ok").gte("created_at", dayStart).lte("created_at", dayEnd) : Promise.resolve({ data: [] }),
+    includeFoodSafety ? db.from("fs_temp_log").select("pass").gte("created_at", dayStart).lte("created_at", dayEnd) : Promise.resolve({ data: [] }),
+    includeFoodSafety ? db.from("fs_signoff").select("id").eq("day", today).maybeSingle() : Promise.resolve({ data: null }),
+    includeFoodSafety ? db.from("fs_course").select("id, refresh_months").eq("active", true) : Promise.resolve({ data: [] }),
+    includeFoodSafety ? db.from("fs_training_record").select("staff_id, course_id, date_done").order("date_done", { ascending: false }) : Promise.resolve({ data: [] }),
   ]);
 
   const activeCount = staff?.length ?? 0;

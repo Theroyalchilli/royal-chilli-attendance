@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { requireManager } from "@/lib/guard";
 import { audit } from "@/lib/attendance-write";
 import { notify } from "@/lib/notify";
@@ -8,18 +8,19 @@ import { notify } from "@/lib/notify";
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
   const id = Number((await params).id);
   const { action } = await req.json();
   if (action !== "approve" && action !== "reject") {
     return NextResponse.json({ error: "Bad action" }, { status: 400 });
   }
 
-  const { data: leave } = await supabase.from("leave_requests").select("*").eq("id", id).maybeSingle();
+  const { data: leave } = await db.from("leave_requests").select("*").eq("id", id).maybeSingle();
   if (!leave) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (leave.status !== "pending") return NextResponse.json({ error: "Already reviewed" }, { status: 409 });
 
   const status = action === "approve" ? "approved" : "rejected";
-  const { data: updated, error } = await supabase
+  const { data: updated, error } = await db
     .from("leave_requests")
     .update({ status, decided_by: g.session.id, decided_at: new Date().toISOString() })
     .eq("id", id)

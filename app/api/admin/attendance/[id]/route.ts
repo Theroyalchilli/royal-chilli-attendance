@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { requireManager } from "@/lib/guard";
 import { recomputeAndSave } from "@/lib/recompute-row";
 import { audit } from "@/lib/attendance-write";
@@ -10,10 +10,11 @@ import { audit } from "@/lib/attendance-write";
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
   const id = Number((await params).id);
   const body = await req.json();
 
-  const { data: before } = await supabase.from("attendance").select("*").eq("id", id).maybeSingle();
+  const { data: before } = await db.from("attendance").select("*").eq("id", id).maybeSingle();
   if (!before) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const patch: Record<string, unknown> = {};
@@ -36,7 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   patch.updated_at = new Date().toISOString();
-  const { error } = await supabase.from("attendance").update(patch).eq("id", id);
+  const { error } = await db.from("attendance").update(patch).eq("id", id);
   if (error) return NextResponse.json({ error: "Update failed" }, { status: 500 });
 
   const updated = await recomputeAndSave(id);
@@ -47,9 +48,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
   const id = Number((await params).id);
-  const { data: before } = await supabase.from("attendance").select("*").eq("id", id).maybeSingle();
-  const { error } = await supabase.from("attendance").delete().eq("id", id);
+  const { data: before } = await db.from("attendance").select("*").eq("id", id).maybeSingle();
+  const { error } = await db.from("attendance").delete().eq("id", id);
   if (error) return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   await audit(g.session.id, "attendance_delete", id, before, null);
   return NextResponse.json({ success: true });

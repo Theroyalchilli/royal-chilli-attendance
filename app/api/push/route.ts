@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { pushConfigured, sendPush, vapidPublicKey } from "@/lib/push";
 
@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { count } = await supabase.from("push_subscriptions").select("id", { count: "exact", head: true }).eq("staff_id", session.id);
+  const db = bizDb(session.businessId);
+  const { count } = await db.from("push_subscriptions").select("id", { count: "exact", head: true }).eq("staff_id", session.id);
   return NextResponse.json({ enabled: pushConfigured(), publicKey: vapidPublicKey(), devices: count ?? 0 });
 }
 
@@ -18,12 +19,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
   const b = await req.json().catch(() => ({}));
   const sub = b.subscription as { endpoint?: string; keys?: { p256dh?: string; auth?: string } } | undefined;
   if (!sub?.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) {
     return NextResponse.json({ error: "Invalid subscription" }, { status: 400 });
   }
-  const { error } = await supabase.from("push_subscriptions").upsert(
+  const { error } = await db.from("push_subscriptions").upsert(
     {
       staff_id: session.id,
       endpoint: sub.endpoint,
@@ -44,7 +46,8 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
   const b = await req.json().catch(() => ({}));
-  if (b.endpoint) await supabase.from("push_subscriptions").delete().eq("staff_id", session.id).eq("endpoint", String(b.endpoint));
+  if (b.endpoint) await db.from("push_subscriptions").delete().eq("staff_id", session.id).eq("endpoint", String(b.endpoint));
   return NextResponse.json({ success: true });
 }

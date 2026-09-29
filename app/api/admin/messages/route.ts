@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
+import { staffIdsAt } from "@/lib/business";
 import { deliverMessage, type Audience } from "@/lib/staff-messages";
 import { requireSender } from "./guard";
 
@@ -10,19 +11,20 @@ const AUDIENCES: Audience[] = ["everyone", "today", "managers", "people"];
 export async function GET(req: NextRequest) {
   const g = await requireSender(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
   const [{ data: messages }, { data: staff }] = await Promise.all([
-    supabase
+    db
       .from("staff_messages")
       .select("id, title, body, audience, staff_ids, send_at, sent_at, cancelled_at, recipients, phones, created_at, created_by")
       .order("created_at", { ascending: false })
       .limit(50),
-    supabase.from("staff").select("id, name, role").eq("active", 1).order("name"),
+    db.from("staff").select("id, name, role").eq("active", 1).in("id", await staffIdsAt(g.session.businessId)).order("name"),
   ]);
   const names = new Map((staff ?? []).map((s) => [s.id, s.name]));
   // read receipts: who has / hasn't opened each sent message
   const sentIds = (messages ?? []).filter((m) => m.sent_at).map((m) => m.id);
   const { data: receipts } = sentIds.length
-    ? await supabase.from("notifications").select("message_id, staff_id, read_at").in("message_id", sentIds)
+    ? await db.from("notifications").select("message_id, staff_id, read_at").in("message_id", sentIds)
     : { data: [] as { message_id: number; staff_id: number; read_at: string | null }[] };
   const readBy = new Map<number, { read: string[]; unread: string[] }>();
   for (const r of receipts ?? []) {
@@ -40,6 +42,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const g = await requireSender(req);
   if ("res" in g) return g.res;
+  const db = bizDb(g.session.businessId);
   const b = await req.json().catch(() => ({}));
   const title = String(b.title || "").trim().slice(0, 80);
   const body = String(b.body || "").trim().slice(0, 500);
@@ -57,7 +60,7 @@ export async function POST(req: NextRequest) {
   }
   const scheduled = sendAt.getTime() > Date.now() + 60_000;
 
-  const { data: row, error } = await supabase
+  const { data: row, error } = await db
     .from("staff_messages")
     .insert({ title, body, audience, staff_ids: audience === "people" ? staffIds : null, send_at: sendAt.toISOString(), created_by: g.session.id })
     .select("id")

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { canLogFoodSafety } from "@/lib/food-safety-permissions";
 
@@ -9,6 +9,7 @@ import { canLogFoodSafety } from "@/lib/food-safety-permissions";
 export async function POST(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
   if (!canLogFoodSafety(session.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { temp_type_id, value, corrective_action } = await req.json().catch(() => ({}));
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "temp_type_id and a numeric value are required" }, { status: 400 });
   }
 
-  const { data: tempType } = await supabase.from("fs_temp_type").select("kind, limit_value").eq("id", temp_type_id).single();
+  const { data: tempType } = await db.from("fs_temp_type").select("kind, limit_value").eq("id", temp_type_id).single();
   if (!tempType) return NextResponse.json({ error: "Unknown temp type" }, { status: 404 });
 
   const pass = tempType.kind === "max" ? value <= Number(tempType.limit_value) : value >= Number(tempType.limit_value);
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "A corrective action is required when a reading fails" }, { status: 400 });
   }
 
-  const { error } = await supabase.from("fs_temp_log").insert({
+  const { error } = await db.from("fs_temp_log").insert({
     temp_type_id,
     staff_id: session.id,
     value,

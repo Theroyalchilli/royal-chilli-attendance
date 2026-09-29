@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -9,13 +9,14 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const db = bizDb(session.businessId);
 
   const { searchParams } = new URL(req.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   if (!from || !to) return NextResponse.json({ error: "from and to required" }, { status: 400 });
 
-  const { data } = await supabase
+  const { data } = await db
     .from("attendance")
     .select("id, work_date, clock_in, clock_out, clock_in_method, net_work_seconds, regular_seconds, overtime_seconds, break_seconds, late_seconds, status")
     .eq("staff_id", session.id)

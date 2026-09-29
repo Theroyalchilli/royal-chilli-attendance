@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import supabase from "@/lib/supabase";
+import { bizDb } from "@/lib/business-db";
+import { staffIdsAt } from "@/lib/business";
 import { getSessionFromRequest } from "@/lib/auth";
 import { canManageAttendance } from "@/lib/permissions";
 
@@ -10,13 +11,15 @@ export async function GET(req: NextRequest) {
   if (!session || !canManageAttendance(session.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const db = bizDb(session.businessId);
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("staff")
     .select(
       "id, name, role, employment_type, pay_rate, rota_start, rota_end, rota_working_days, rota_break_minutes, rota_grace_minutes",
     )
     .eq("active", 1)
+    .in("id", await staffIdsAt(session.businessId))
     .order("name");
   if (error) return NextResponse.json({ error: "Failed to load staff" }, { status: 500 });
 
