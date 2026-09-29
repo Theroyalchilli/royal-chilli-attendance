@@ -1,28 +1,29 @@
 import supabase from "./supabase";
 import { DEFAULT_BUSINESS_ID } from "./business-id";
 
-// Several businesses share one database (royal-chilli-pos migration 076).
-// Staff are shared; each login works for one business at a time. Mirrors the
-// parts of royal-chilli-pos/lib/business.ts this app needs.
+// Several independent businesses share one database (royal-chilli-pos
+// migrations 076–079). Each staff member belongs to exactly one business
+// (staff.business_id); the group owner (staff.is_owner) belongs to none and
+// can work in any. Mirrors royal-chilli-pos/lib/business.ts.
 
 export { DEFAULT_BUSINESS_ID };
 
-/** Active businesses this staff member works at, lowest id first. */
-export async function staffBusinessIds(staffId: number): Promise<number[]> {
-  const { data, error } = await supabase
-    .from("staff_businesses").select("business_id").eq("staff_id", staffId).eq("active", true).order("business_id");
+/** A staff member's business, and whether they're the group owner. */
+export async function staffHome(staffId: number): Promise<{ businessId: number | null; isOwner: boolean }> {
+  const { data, error } = await supabase.from("staff").select("business_id, is_owner").eq("id", staffId).maybeSingle();
   if (error) throw error;
-  return (data ?? []).map((r) => r.business_id as number);
+  return { businessId: (data?.business_id as number | null) ?? null, isOwner: !!data?.is_owner };
 }
 
-/** Which business a login works for: their first. null = not set up anywhere. */
+/** Which business a login works for: their own (the owner starts at The Royal Chilli). null = not set up. */
 export async function loginBusinessId(staffId: number): Promise<number | null> {
-  return (await staffBusinessIds(staffId))[0] ?? null;
+  const home = await staffHome(staffId);
+  return home.isOwner ? DEFAULT_BUSINESS_ID : home.businessId;
 }
 
-/** Ids of the (shared) staff who work at this business. */
+/** Ids of this business's own staff (the owner isn't on any business's staff list). */
 export async function staffIdsAt(businessId: number): Promise<number[]> {
-  const { data, error } = await supabase.from("staff_businesses").select("staff_id").eq("business_id", businessId).eq("active", true);
+  const { data, error } = await supabase.from("staff").select("id").eq("business_id", businessId);
   if (error) throw error;
-  return (data ?? []).map((r) => r.staff_id as number);
+  return (data ?? []).map((r) => r.id as number);
 }

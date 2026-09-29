@@ -14,6 +14,8 @@ export const BUSINESS_TABLES = new Set([
   "fs_delivery_check", "fs_problem", "fs_signoff",
   "shifts", "attendance", "timesheets", "payroll_periods", "employee_payslips", "leave_requests",
   "audit_logs", "loyalty_transactions", "platform_sales", "staff_messages", "attendance_corrections",
+  // 079: every business independent
+  "suppliers", "customers", "loyalty_tiers", "loyalty_rewards", "loyalty_redemptions", "newsletter_subscribers",
 ]);
 
 type Builder = ReturnType<typeof supabase.from>;
@@ -75,11 +77,11 @@ export async function allOwned(db: BizDb, table: string, ids: (number | string)[
   return (data ?? []).length === unique.length;
 }
 
-/** Does this (shared) staff member work at the business? */
+/** Is this one of the business's own staff? (The owner isn't anyone's staff.) */
 export async function staffWorksAt(db: BizDb, staffId: number | string): Promise<boolean> {
   const { data, error } = await supabase
-    .from("staff_businesses").select("staff_id")
-    .eq("staff_id", Number(staffId)).eq("business_id", db.businessId).eq("active", true)
+    .from("staff").select("id")
+    .eq("id", Number(staffId)).eq("business_id", db.businessId)
     .maybeSingle();
   if (error) throw error;
   return !!data;

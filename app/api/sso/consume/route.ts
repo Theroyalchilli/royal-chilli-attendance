@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
       name: payload.name as string,
       role: payload.role as SessionUser["role"],
       businessId: typeof payload.bid === "number" && payload.bid > 0 ? payload.bid : DEFAULT_BUSINESS_ID,
+      ...(payload.own === true ? { owner: true } : {}),
     };
     const sessionToken = await createSession(user);
     const { name: cookieName, options } = getSessionCookieOptions();

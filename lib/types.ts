@@ -7,6 +7,8 @@ export type SessionUser = {
   role: StaffRole;
   /** The business this login is working for (shared with royal-chilli-pos). */
   businessId: number;
+  /** The group owner (can switch business in the Staff Hub). */
+  owner?: boolean;
 };
 
 export type ClockMethod = "kiosk" | "web" | "qr" | "manual";
