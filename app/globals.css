@@ -11,6 +11,16 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Top menu (components/Shell.tsx): a group's list shows when clicked (.open)
+   and, with a mouse, on hover — the ::before bridge covers the gap so it
+   doesn't close on the way down. Touch keeps tap-to-open. */
+.top-dd { display: none; }
+.top-mi.open .top-dd { display: block; }
+@media (hover: hover) and (pointer: fine) {
+  .top-mi:hover .top-dd { display: block; }
+  .top-dd::before { content: ""; position: absolute; left: 0; right: 0; top: -8px; height: 8px; }
+}
+
 /* Kiosk is a fixed tablet — stop text selection and long-press menus. */
 .no-select {
   -webkit-user-select: none;
