@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { clockTime, dayLabel, hm } from "@/lib/format";
 import { SHIFT_STATUS_BADGE, SHIFT_STATUS_LABEL, type ShiftStatus } from "@/lib/shift-status";
+import { confirmDelete } from "@/components/ui/confirm";
 
 type Row = {
   id: number;
@@ -395,7 +396,7 @@ function EditModal({ row, onClose, onSaved }: { row: Row; onClose: () => void; o
   }
 
   async function del() {
-    if (!confirm(`Delete ${row.staff_name}'s ${row.work_date} entry?`)) return;
+    if (!(await confirmDelete(`${row.staff_name}'s ${row.work_date} entry`))) return;
     setBusy(true);
     await fetch(`/api/admin/attendance/${row.id}`, { method: "DELETE" });
     onSaved();

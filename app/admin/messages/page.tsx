@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { confirmDelete } from "@/components/ui/confirm";
 
 // Admin → Messages: write a message to staff and send it now or at a set time.
 // It goes to their 🔔 bell and to phones with notifications on.
@@ -101,6 +102,7 @@ export default function MessagesPage() {
   }
 
   async function cancel(id: number) {
+    if (!(await confirmDelete("this message"))) return;
     await fetch(`/api/admin/messages/${id}`, { method: "DELETE" });
     load();
   }

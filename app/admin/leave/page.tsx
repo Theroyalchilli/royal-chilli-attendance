@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { dayLabel } from "@/lib/format";
+import { confirmDialog } from "@/components/ui/confirm";
 
 type Leave = {
   id: number;
@@ -38,7 +39,7 @@ export default function AdminLeavePage() {
   }, [load]);
 
   async function review(id: number, action: "approve" | "reject") {
-    if (action === "reject" && !confirm("Reject this leave request?")) return;
+    if (action === "reject" && !(await confirmDialog({ title: "Reject this leave request?", message: "Are you sure you want to reject it?", confirmLabel: "Yes, reject" }))) return;
     setBusy(id);
     await fetch(`/api/admin/leave/${id}`, {
       method: "PATCH",

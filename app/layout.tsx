@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Playfair_Display } from "next/font/google";
 import "./globals.css";
+import { ConfirmHost } from "@/components/ui/confirm";
 
 // Same face used for "The Royal Chilli" on the customer account header —
 // keeps the two apps' branding consistent.
@@ -35,7 +36,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={playfair.variable}>
-      <body className="min-h-full bg-cream text-ink antialiased">{children}</body>
+      <body className="min-h-full bg-cream text-ink antialiased">{children}<ConfirmHost /></body>
     </html>
   );
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { kindOf, splitNotification, type NotifGroup } from "@/lib/notification-kinds";
+import { confirmDelete } from "@/components/ui/confirm";
 
 // The 🔔 in the top bar: a count of unread notifications, and a panel that
 // slides up from the bottom on a phone (a side panel on a computer) with
@@ -139,7 +140,8 @@ export default function NotificationBell() {
     setItems((list) => list.map((x) => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x)));
     markNotificationsRead({ id: n.id });
   }
-  function remove(n: Notif) {
+  async function remove(n: Notif) {
+    if (!(await confirmDelete("this notification"))) return;
     setItems((list) => list.filter((x) => x.id !== n.id));
     markNotificationsRead({ delete: n.id });
   }

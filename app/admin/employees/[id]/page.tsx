@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { hm, dayLabel, clockTime } from "@/lib/format";
+import { confirmDelete } from "@/components/ui/confirm";
 
 type Staff = {
   id: number;
@@ -442,7 +443,7 @@ function AttendanceEditModal({ row, onClose, onSaved }: { row: Row; onClose: () 
   }
 
   async function del() {
-    if (!confirm(`Delete the ${row.work_date} entry?`)) return;
+    if (!(await confirmDelete(`the ${row.work_date} entry`))) return;
     setBusy(true);
     await fetch(`/api/admin/attendance/${row.id}`, { method: "DELETE" });
     onSaved();

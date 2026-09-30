@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { confirmDelete } from "@/components/ui/confirm";
 
 type Staff = {
   id: number;
@@ -275,7 +276,7 @@ function ShiftModal({
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
           {shift && (
             <button
-              onClick={async () => { setBusy(true); await onClear(); onDone(); }}
+              onClick={async () => { if (!(await confirmDelete("this shift"))) return; setBusy(true); await onClear(); onDone(); }}
               disabled={busy}
               className="rounded-xl border border-neutral-300 px-3 py-2.5 text-sm text-red-600"
             >
