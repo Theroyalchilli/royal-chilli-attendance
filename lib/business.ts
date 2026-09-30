@@ -27,3 +27,26 @@ export async function staffIdsAt(businessId: number): Promise<number[]> {
   if (error) throw error;
   return (data ?? []).map((r) => r.id as number);
 }
+
+export type BusinessRow = { id: number; name: string; active: boolean };
+
+/** Every business, in display order (the owner's switcher). */
+export async function listBusinesses(): Promise<BusinessRow[]> {
+  const { data, error } = await supabase.from("businesses").select("id, name, active").order("display_order").order("id");
+  if (error) throw error;
+  return (data ?? []) as BusinessRow[];
+}
+
+export async function getBusiness(id: number): Promise<BusinessRow | null> {
+  const { data } = await supabase.from("businesses").select("id, name, active").eq("id", id).maybeSingle();
+  return (data as BusinessRow | null) ?? null;
+}
+
+/** What the header needs: this business's name, and the owner's picker (owner only). */
+export async function headerBusiness(session: { businessId: number; owner?: boolean }) {
+  if (session.owner) {
+    const all = await listBusinesses().catch(() => []);
+    return { name: all.find((b) => b.id === session.businessId)?.name ?? "", switcher: all };
+  }
+  return { name: (await getBusiness(session.businessId).catch(() => null))?.name ?? "", switcher: undefined };
+}

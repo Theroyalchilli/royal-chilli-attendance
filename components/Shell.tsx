@@ -7,8 +7,13 @@ import { usePathname, useRouter } from "next/navigation";
 import NotificationBell from "./NotificationBell";
 import BottomNav from "./BottomNav";
 import ChangePasswordModal from "./ChangePasswordModal";
+import BusinessSwitcher, { type SwitcherOption } from "./BusinessSwitcher";
 import type { SessionUser } from "@/lib/types";
 import type { NavGroup, NavItem } from "@/lib/nav";
+
+/** Up to two initials, for a business with no logo yet ("Melt House" -> "MH"). */
+const initials = (name: string) =>
+  name.split(/\s+/).filter((w) => /^[A-Za-z0-9]/.test(w) && w.toLowerCase() !== "the").slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "?";
 
 const ROLE_LABEL: Record<string, string> = { employee: "Employee", manager: "Manager", hr: "HR", admin: "Admin" };
 
@@ -20,11 +25,14 @@ export default function Shell({
   user,
   nav,
   approvals = 0,
+  business,
   children,
 }: {
   user: SessionUser;
   nav: NavGroup[];
   approvals?: number;
+  /** The business this login works in; `switcher` = the owner's picker (owner only). */
+  business?: { name: string; switcher?: SwitcherOption[] };
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -35,6 +43,7 @@ export default function Shell({
   const [passwordOpen, setPasswordOpen] = useState(false);
   const barRef = useRef<HTMLElement>(null);
   const isEmployee = user.role === "employee";
+  const bizName = business?.name || "The Royal Chilli";
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -117,15 +126,21 @@ export default function Shell({
       <header ref={barRef} className={`sticky top-0 z-30 print:hidden ${isEmployee ? "bg-brand text-white shadow-sm md:bg-white md:text-ink md:shadow-none" : "bg-white"} border-b border-line`}>
         <div className="mx-auto flex max-w-[1400px] items-center gap-4 px-4 py-2.5">
           <Link href={isEmployee ? "/me" : "/admin"} className="flex min-w-0 items-center gap-2.5">
-            <Image src="/logo.png" alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-[10px] object-cover" />
+            {user.businessId === 1 ? (
+              <Image src="/logo.png" alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-[10px] object-cover" />
+            ) : (
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-ink text-sm font-bold text-white">{initials(bizName)}</span>
+            )}
             <span className="min-w-0">
-              <span className="block truncate font-[family-name:var(--font-playfair)] text-[15px] font-bold leading-tight">The Royal Chilli</span>
+              <span className="block truncate font-[family-name:var(--font-playfair)] text-[15px] font-bold leading-tight">{bizName}</span>
               {/* hidden while the menu row needs the room (md–xl) */}
               <span className={`block truncate text-[11.5px] leading-snug md:hidden xl:block ${isEmployee ? "text-white/75 md:text-neutral-500" : "text-neutral-500"}`}>
                 Staff Attendance · {user.name} · {ROLE_LABEL[user.role] ?? user.role}
               </span>
             </span>
           </Link>
+
+          {business?.switcher && <BusinessSwitcher current={user.businessId} options={business.switcher} className="hidden lg:flex" />}
 
           {/* Computer: the menu row */}
           <nav className="ml-auto hidden items-center gap-0.5 md:flex" aria-label="Main">
@@ -214,6 +229,7 @@ export default function Shell({
             </div>
             <nav className="flex-1 overflow-y-auto px-2.5 pb-6 pt-1">
               <p className="px-2.5 pb-1 pt-2 text-xs text-neutral-500">{user.name} · {ROLE_LABEL[user.role] ?? user.role}</p>
+              {business?.switcher && <BusinessSwitcher current={user.businessId} options={business.switcher} className="px-2.5 pb-2" />}
               {nav.map((g, gi) => (
                 <div key={gi}>
                   {g.label && (
