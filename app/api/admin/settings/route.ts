@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { bizDb } from "@/lib/business-db";
+import supabase from "@/lib/supabase";
 import { getSessionFromRequest } from "@/lib/auth";
 import { clearSettingsCache } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
 // Attendance app settings — admin only. Currently just the geofence for phone
-// clock-in. Reuses the shared app_settings keys.
+// clock-in. This business's own settings (business_settings).
 const KEYS = ["geofence_enabled", "restaurant_latitude", "restaurant_longitude", "geofence_radius_meters"];
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session || session.role !== "admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const db = bizDb(session.businessId);
-
-  const { data } = await db.from("app_settings").select("key, value").in("key", KEYS);
+  const { data } = await supabase.from("business_settings").select("key, value").eq("business_id", session.businessId).in("key", KEYS);
   const m = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
   return NextResponse.json({
     geofence_enabled: m.geofence_enabled === true || m.geofence_enabled === "true",
@@ -27,12 +25,10 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session || session.role !== "admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const db = bizDb(session.businessId);
-
   const b = await req.json();
-  const rows: { key: string; value: unknown; updated_at: string }[] = [];
+  const rows: { business_id: number; key: string; value: unknown; updated_at: string }[] = [];
   const now = new Date().toISOString();
-  const set = (key: string, value: unknown) => rows.push({ key, value, updated_at: now });
+  const set = (key: string, value: unknown) => rows.push({ business_id: session.businessId, key, value, updated_at: now });
 
   if ("geofence_enabled" in b) set("geofence_enabled", !!b.geofence_enabled);
   if ("restaurant_latitude" in b) set("restaurant_latitude", b.restaurant_latitude == null ? null : Number(b.restaurant_latitude));
@@ -41,7 +37,7 @@ export async function PUT(req: NextRequest) {
 
   if (rows.length === 0) return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
 
-  const { error } = await db.from("app_settings").upsert(rows, { onConflict: "key" });
+  const { error } = await supabase.from("business_settings").upsert(rows, { onConflict: "business_id,key" });
   if (error) return NextResponse.json({ error: "Save failed" }, { status: 500 });
   clearSettingsCache();
   return NextResponse.json({ success: true });

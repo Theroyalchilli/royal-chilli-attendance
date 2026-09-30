@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/supabase";
 import { assertCron } from "@/lib/cron";
+import { DEFAULT_BUSINESS_ID } from "@/lib/business-id";
 import { getAttendanceSettings, localDateString } from "@/lib/settings";
 import { dueShiftAlerts, type AlertKind } from "@/lib/shift-alerts";
 import { notify, notifyManagers } from "@/lib/notify";
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
   const bad = assertCron(req);
   if (bad) return bad;
 
-  const settings = await getAttendanceSettings();
+  const settings = await getAttendanceSettings(DEFAULT_BUSINESS_ID) /* group-wide job: UK timezone + default timings */;
   const now = new Date();
   const today = localDateString(now, settings.timezone);
   const y = new Date(`${today}T12:00:00Z`);

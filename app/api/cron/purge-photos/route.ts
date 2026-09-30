@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/supabase";
 import { assertCron } from "@/lib/cron";
+import { DEFAULT_BUSINESS_ID } from "@/lib/business-id";
 import { getAttendanceSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
   const bad = assertCron(req);
   if (bad) return bad;
 
-  const settings = await getAttendanceSettings();
+  const settings = await getAttendanceSettings(DEFAULT_BUSINESS_ID) /* group-wide job: UK timezone + default timings */;
   const cutoff = new Date(Date.now() - settings.photoRetentionDays * 86400_000);
   const cutoffMonth = cutoff.toISOString().slice(0, 7); // "YYYY-MM"
 

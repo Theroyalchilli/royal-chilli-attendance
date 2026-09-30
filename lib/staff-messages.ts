@@ -28,7 +28,7 @@ export async function recipientsFor(businessId: number, audience: Audience, staf
     return [...new Set(staffIds)].filter((id) => ok.has(id));
   }
   // working today: on today's rota, or clocked in right now
-  const settings = await getAttendanceSettings();
+  const settings = await getAttendanceSettings(businessId);
   const today = localDateString(new Date(), settings.timezone);
   const [{ data: shifts }, { data: open }] = await Promise.all([
     bizDb(businessId).from("shifts").select("staff_id").eq("shift_date", today).neq("status", "cancelled"),

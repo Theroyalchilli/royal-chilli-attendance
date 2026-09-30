@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   if ("res" in g) return g.res;
   const db = bizDb(g.session.businessId);
 
-  const settings = await getAttendanceSettings();
+  const settings = await getAttendanceSettings(g.session.businessId);
   const tz = settings.timezone;
   const today = localDateString(new Date(), tz);
   const staleBefore = new Date(Date.now() - settings.missingClockoutHours * 3600_000).toISOString();

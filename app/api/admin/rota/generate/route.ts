@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const { week_start: weekStart, mode } = await req.json();
   if (!weekStart) return NextResponse.json({ error: "week_start required" }, { status: 400 });
   const days = weekDays(weekStart);
-  const settings = await getAttendanceSettings();
+  const settings = await getAttendanceSettings(g.session.businessId);
   const today = localDateString(new Date(), settings.timezone);
   if (days[6] < today) {
     return NextResponse.json({ error: "That week is in the past — Rota is read-only there" }, { status: 400 });

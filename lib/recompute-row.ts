@@ -13,7 +13,7 @@ export async function recomputeAndSave(attendanceId: number): Promise<Record<str
   const { data: row } = await supabase.from("attendance").select("*").eq("id", attendanceId).maybeSingle();
   if (!row) return null;
 
-  const settings = await getAttendanceSettings();
+  const settings = await getAttendanceSettings(row.business_id);
   const rota = await loadStaffRota(row.staff_id);
 
   const sched = await resolveScheduleFor(row.business_id, row.staff_id, row.work_date, rota, settings);

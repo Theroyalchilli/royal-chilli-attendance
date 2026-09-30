@@ -1,7 +1,7 @@
 import supabase from "./supabase";
 
-// Attendance config lives in the shared app_settings table (JSONB values),
-// seeded by POS migration 030. Cached briefly per server instance.
+// Attendance config — each business's own (business_settings, POS migration
+// 080; was the shared app_settings list). Cached briefly per server instance.
 const KEYS = [
   "attendance_timezone",
   "attendance_overtime_enabled",
@@ -47,13 +47,18 @@ const DEFAULTS: AttendanceSettings = {
   geofenceRadiusMeters: 150,
 };
 
-let cache: { at: number; value: AttendanceSettings } | null = null;
+const cache = new Map<number, { at: number; value: AttendanceSettings }>();
 const TTL_MS = 30_000;
 
-export async function getAttendanceSettings(): Promise<AttendanceSettings> {
-  if (cache && Date.now() - cache.at < TTL_MS) return cache.value;
+export async function getAttendanceSettings(businessId: number): Promise<AttendanceSettings> {
+  const hit = cache.get(businessId);
+  if (hit && Date.now() - hit.at < TTL_MS) return hit.value;
 
-  const { data } = await supabase.from("app_settings").select("key, value").in("key", KEYS as unknown as string[]);
+  const { data } = await supabase
+    .from("business_settings")
+    .select("key, value")
+    .eq("business_id", businessId)
+    .in("key", KEYS as unknown as string[]);
   const m = new Map<string, unknown>((data ?? []).map((r) => [r.key, r.value]));
   const num = (k: string, d: number) => {
     const v = m.get(k);
@@ -79,12 +84,12 @@ export async function getAttendanceSettings(): Promise<AttendanceSettings> {
     restaurantLng: m.has("restaurant_longitude") && m.get("restaurant_longitude") != null ? Number(m.get("restaurant_longitude")) : null,
     geofenceRadiusMeters: num("geofence_radius_meters", DEFAULTS.geofenceRadiusMeters),
   };
-  cache = { at: Date.now(), value };
+  cache.set(businessId, { at: Date.now(), value });
   return value;
 }
 
 export function clearSettingsCache() {
-  cache = null;
+  cache.clear();
 }
 
 /** "YYYY-MM-DD" for an instant in the given IANA timezone. */

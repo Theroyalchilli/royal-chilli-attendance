@@ -22,8 +22,8 @@ export type GeoCheck =
  * warning ("not_configured" is only returned when enabled and missing coords
  * AND a location was supplied — we don't want to hard-block on misconfig).
  */
-export async function checkGeofence(lat: number | null, lng: number | null): Promise<GeoCheck> {
-  const s = await getAttendanceSettings();
+export async function checkGeofence(businessId: number, lat: number | null, lng: number | null): Promise<GeoCheck> {
+  const s = await getAttendanceSettings(businessId);
   if (!s.geofenceEnabled) return { ok: true, enforced: false };
   if (s.restaurantLat == null || s.restaurantLng == null) return { ok: true, enforced: false };
 

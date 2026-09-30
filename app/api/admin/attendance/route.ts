@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     q,
     db.from("staff").select("id, name").eq("active", 1).in("id", await staffIdsAt(g.session.businessId)).order("name"),
     shiftsQ,
-    getAttendanceSettings(),
+    getAttendanceSettings(g.session.businessId),
     // Every currently-open shift, any date — used to catch a forgotten
     // clock-out from a day outside whatever range is being viewed right now.
     db.from("attendance").select("staff_id, clock_in").is("clock_out", null).not("clock_in", "is", null),
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Staff, date and clock-in are required" }, { status: 400 });
   }
 
-  const settings = await getAttendanceSettings();
+  const settings = await getAttendanceSettings(g.session.businessId);
   const rota = await loadStaffRota(staffId);
   // split-shift day: the entry belongs to the shift nearest its clock-in
   const sched = await resolveScheduleFor(g.session.businessId, staffId, workDate, rota, settings, new Date(clockIn));

@@ -38,7 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const staffId = Number((await params).id);
   if (!(await staffWorksAt(db, staffId))) return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
 
-  const settings = await getAttendanceSettings();
+  const settings = await getAttendanceSettings(g.session.businessId);
   const { searchParams } = new URL(req.url);
   const range = searchParams.get("range") ?? "week";
   const anchor = searchParams.get("date") || localDateString(new Date(), settings.timezone);

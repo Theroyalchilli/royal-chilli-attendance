@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Start and end can't be the same time" }, { status: 400 });
   }
 
-  const settings = await getAttendanceSettings();
+  const settings = await getAttendanceSettings(g.session.businessId);
   const today = localDateString(new Date(), settings.timezone);
   if (date < today) {
     return NextResponse.json({ error: "Can't schedule a shift for a date that's already passed" }, { status: 400 });

@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const db = bizDb(session.businessId);
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
-  const settings = await getAttendanceSettings();
+  const settings = await getAttendanceSettings(session.businessId);
   const today = localDateString(new Date(), settings.timezone);
 
   const [{ data: mine }, { data: recentRows }] = await Promise.all([
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     // Sentinel from GET: today, no attendance row yet — create a blank one
     // (not_started, unclocked) so there's something real to attach the
     // correction request to; the manager's approval flow fills in the times.
-    const settings = await getAttendanceSettings();
+    const settings = await getAttendanceSettings(session.businessId);
     const today = localDateString(new Date(), settings.timezone);
     const { data: created, error: createErr } = await db
       .from("attendance")

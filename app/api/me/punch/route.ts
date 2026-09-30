@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     .not("clock_in", "is", null)
     .maybeSingle();
 
-  const s = await getAttendanceSettings();
+  const s = await getAttendanceSettings(session.businessId);
   // Split shift, forgot to clock out after the first half: the button should
   // offer "Clock In" for the next shift, not "Clock Out" with the gap hours.
   let forgot: { closes_at: string; next_start: string } | null = null;
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     const lat = typeof body.lat === "number" ? body.lat : null;
     const lng = typeof body.lng === "number" ? body.lng : null;
 
-    const geo = await checkGeofence(lat, lng);
+    const geo = await checkGeofence(session.businessId, lat, lng);
     if (!geo.ok) {
       const msg =
         geo.reason === "no_location"
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: msg }, { status: 403 });
     }
 
-    const settings = await getAttendanceSettings();
+    const settings = await getAttendanceSettings(session.businessId);
     const now = new Date();
 
     const rota = await loadStaffRota<{ name: string }>(session.id, "name");

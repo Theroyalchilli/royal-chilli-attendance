@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const canSignoff = canSignoffFoodSafety(session.role, staffRow?.can_signoff ?? false);
   const canLog = canLogFoodSafety(session.role);
 
-  const settings = await getAttendanceSettings();
+  const settings = await getAttendanceSettings(session.businessId);
   const today = localDateString(new Date(), settings.timezone);
   const dayStart = `${today}T00:00:00.000Z`;
   const dayEnd = `${today}T23:59:59.999Z`;

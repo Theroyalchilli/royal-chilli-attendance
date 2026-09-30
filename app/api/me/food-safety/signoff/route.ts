@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "You don't have sign-off authority" }, { status: 403 });
   }
 
-  const settings = await getAttendanceSettings();
+  const settings = await getAttendanceSettings(session.businessId);
   const today = localDateString(new Date(), settings.timezone);
 
   const { data: existing } = await db.from("fs_signoff").select("id").eq("day", today).maybeSingle();
