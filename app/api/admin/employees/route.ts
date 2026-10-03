@@ -6,7 +6,7 @@ import { requireManager } from "@/lib/guard";
 export const dynamic = "force-dynamic";
 
 // Admin, then HR, then Manager, then Employee.
-const ROLE_ORDER: Record<string, number> = { admin: 0, supervisor: 1, manager: 2, hr: 3, employee: 4, kitchen: 5 };
+const ROLE_ORDER: Record<string, number> = { admin: 0, manager: 1, hr: 2, employee: 3, kitchen: 4 };
 
 // GET ?q=&role=&active= — search by name/employee number, filter by role,
 // filter by active (1 = active [default], 0 = inactive, "all" = both).

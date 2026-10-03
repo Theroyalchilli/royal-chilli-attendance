@@ -22,7 +22,7 @@ export async function recipientsFor(businessId: number, audience: Audience, staf
   const { data: active } = await supabase.from("staff").select("id, role").eq("active", 1).in("id", await staffIdsAt(businessId));
   const all = (active ?? []) as { id: number; role: string }[];
   if (audience === "everyone") return all.map((s) => s.id);
-  if (audience === "managers") return all.filter((s) => ["supervisor", "manager", "hr", "admin"].includes(s.role)).map((s) => s.id);
+  if (audience === "managers") return all.filter((s) => ["manager", "hr", "admin"].includes(s.role)).map((s) => s.id);
   if (audience === "people") {
     const ok = new Set(all.map((s) => s.id));
     return [...new Set(staffIds)].filter((id) => ok.has(id));
