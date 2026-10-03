@@ -117,7 +117,6 @@ export default function Shell({
       <button type="button" onClick={() => { setOpenMenu(null); setDrawerOpen(false); setPasswordOpen(true); }} className={`${link(false)} w-full text-left`}>
         <span className="w-5 shrink-0 text-center">🔒</span>Change password
       </button>
-      {user.role === "admin" && itemLink({ href: "/admin/settings", label: "Settings", icon: "⚙️" }, link(active("/admin/settings")))}
       <button type="button" onClick={signOut} className={`${link(false)} w-full text-left`}>
         <span className="w-5 shrink-0 text-center">↩</span>Sign out
       </button>

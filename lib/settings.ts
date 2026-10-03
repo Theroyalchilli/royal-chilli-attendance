@@ -48,6 +48,8 @@ const DEFAULTS: AttendanceSettings = {
 };
 
 const cache = new Map<number, { at: number; value: AttendanceSettings }>();
+// Geofence etc. are edited in the POS Staff Hub (Settings → Clock-in
+// location), so changes reach this app within 30 seconds.
 const TTL_MS = 30_000;
 
 export async function getAttendanceSettings(businessId: number): Promise<AttendanceSettings> {
@@ -86,10 +88,6 @@ export async function getAttendanceSettings(businessId: number): Promise<Attenda
   };
   cache.set(businessId, { at: Date.now(), value });
   return value;
-}
-
-export function clearSettingsCache() {
-  cache.clear();
 }
 
 /** "YYYY-MM-DD" for an instant in the given IANA timezone. */
