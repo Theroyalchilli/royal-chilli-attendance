@@ -22,6 +22,13 @@ type Row = {
   status: string;
   approval_status: string;
   photo_missing: boolean;
+  /** Did the phone see a face before taking each photo? null = no photo. */
+  clock_in_face: boolean | null;
+  clock_out_face: boolean | null;
+  /** Manager's check of the photos. */
+  photo_review: "ok" | "invalid" | null;
+  in_photo_url: string | null;
+  out_photo_url: string | null;
   notes: string | null;
   is_stuck: boolean;
   rota: string | null;
@@ -286,9 +293,14 @@ export default function AttendancePage() {
                               {r.is_stuck && <span className="mr-1 rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700">forgotten clock-out</span>}
                               {r.late_seconds > 0 && <span className="mr-1 text-amber-600">late {hm(r.late_seconds)}</span>}
                               {r.adjustment_seconds !== 0 && <span className="mr-1 text-blue-600">adj {r.adjustment_seconds > 0 ? "+" : ""}{Math.round(r.adjustment_seconds / 60)}m</span>}
+                              <PhotoThumbs r={r} />
                               {r.photo_missing && <span className="mr-1 text-neutral-400">no photo</span>}
+                              {r.photo_review === "invalid" && <span className="mr-1 rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700">photo not valid</span>}
+                              {r.photo_review !== "ok" && r.photo_review !== "invalid" && (r.clock_in_face === false || r.clock_out_face === false) && (
+                                <span className="mr-1 text-amber-600">photo not face-checked</span>
+                              )}
                               {r.approval_status === "pending" && !r.is_stuck && <span className="text-amber-600">needs review</span>}
-                              {!r.clock_out && !r.is_stuck && !r.late_seconds && r.adjustment_seconds === 0 && !r.photo_missing && r.approval_status !== "pending" && <span className="text-emerald-600">on shift</span>}
+                              {!r.clock_out && !r.is_stuck && !r.late_seconds && r.adjustment_seconds === 0 && !r.photo_missing && r.photo_review !== "invalid" && r.approval_status !== "pending" && <span className="text-emerald-600">on shift</span>}
                             </td>
                           </tr>
                         )),
@@ -434,10 +446,37 @@ function EditModal({ row, onClose, onSaved }: { row: Row; onClose: () => void; o
           <input value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900" />
         </label>
 
-        <div className="mt-3 flex gap-3 text-xs">
-          {!row.photo_missing && row.clock_in && <button onClick={() => showPhoto("in")} className="text-blue-600 hover:underline">clock-in photo</button>}
-          {!row.photo_missing && row.clock_out && <button onClick={() => showPhoto("out")} className="text-blue-600 hover:underline">clock-out photo</button>}
-        </div>
+        {(row.in_photo_url || row.out_photo_url) ? (
+          <div className="mt-3">
+            <div className="flex gap-3">
+              {([["in", row.in_photo_url, row.clock_in_face], ["out", row.out_photo_url, row.clock_out_face]] as const).map(([leg, url, face]) => url && (
+                <figure key={leg} className="w-1/2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`clock-${leg} photo`} className="aspect-[3/4] w-full rounded-lg border border-neutral-200 object-cover" />
+                  <figcaption className="mt-1 text-[11px] text-neutral-500">
+                    Clock {leg}{face === false ? " · not face-checked" : face ? " · face seen" : ""}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-neutral-500">Photos:</span>
+              <button onClick={() => save({ photo_review: "ok" })} disabled={busy}
+                className={`rounded-lg border px-2.5 py-1 font-semibold ${row.photo_review === "ok" ? "border-emerald-600 bg-emerald-600 text-white" : "border-neutral-300 hover:bg-neutral-50"}`}>
+                ✓ Looks OK
+              </button>
+              <button onClick={() => save({ photo_review: "invalid" })} disabled={busy}
+                className={`rounded-lg border px-2.5 py-1 font-semibold ${row.photo_review === "invalid" ? "border-red-600 bg-red-600 text-white" : "border-neutral-300 hover:bg-neutral-50"}`}>
+                ✗ Not a valid photo
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-3 flex gap-3 text-xs">
+            {!row.photo_missing && row.clock_in && <button onClick={() => showPhoto("in")} className="text-blue-600 hover:underline">clock-in photo</button>}
+            {!row.photo_missing && row.clock_out && <button onClick={() => showPhoto("out")} className="text-blue-600 hover:underline">clock-out photo</button>}
+          </div>
+        )}
         {photo && (
           <div className="mt-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -515,5 +554,19 @@ function ManualEntryModal({ staff, prefill, onClose, onSaved }: { staff: Staff[]
         </div>
       </div>
     </div>
+  );
+}
+
+// Small clock-in / clock-out photos in the list, so a manager can spot a
+// photo that isn't a face at a glance (tap the row to look closer).
+function PhotoThumbs({ r }: { r: Row }) {
+  if (!r.in_photo_url && !r.out_photo_url) return null;
+  return (
+    <span className="mr-1.5 inline-flex -space-x-1 align-middle">
+      {[r.in_photo_url, r.out_photo_url].map((url, i) => url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={i} src={url} alt="" loading="lazy" className="h-7 w-7 rounded-full border-2 border-white object-cover shadow-sm" />
+      ))}
+    </span>
   );
 }

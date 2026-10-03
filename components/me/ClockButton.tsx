@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { captureSelfie, getPosition } from "@/lib/selfie";
+import { getPosition } from "@/lib/selfie";
+import { preloadFaceDetector } from "@/lib/face-detector";
+import SelfieCamera, { type SelfieResult } from "@/components/me/SelfieCamera";
 import { hm } from "@/lib/format";
 
 type Status = {
@@ -18,6 +20,8 @@ export default function ClockButton() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [msg, setMsg] = useState("");
   const [, setTick] = useState(0);
+  // The camera screen is open; resolves with the photo (or null = cancelled).
+  const [camera, setCamera] = useState<((r: SelfieResult) => void) | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -30,6 +34,7 @@ export default function ClockButton() {
 
   useEffect(() => {
     load();
+    preloadFaceDetector();
     const t = setInterval(() => setTick((n) => n + 1), 30_000);
     return () => clearInterval(t);
   }, [load]);
@@ -40,14 +45,17 @@ export default function ClockButton() {
     const pos = status?.geofence ? await getPosition() : null;
 
     setPhase("capturing");
-    const photo = await captureSelfie();
+    const shot = await new Promise<SelfieResult>((resolve) => setCamera(() => resolve));
+    setCamera(null);
+    if (!shot) { setPhase("idle"); return; }
+    const { photo, face } = shot;
 
     setPhase("sending");
     try {
       const res = await fetch("/api/me/punch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photo, lat: pos?.lat, lng: pos?.lng }),
+        body: JSON.stringify({ photo, face, lat: pos?.lat, lng: pos?.lng }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -77,11 +85,12 @@ export default function ClockButton() {
   }
 
   const busy = phase === "locating" || phase === "capturing" || phase === "sending";
-  const busyLabel = phase === "locating" ? "Checking location…" : phase === "capturing" ? "📸 Hold still…" : "Saving…";
+  const busyLabel = phase === "locating" ? "Checking location…" : phase === "capturing" ? "📸 Photo…" : "Saving…";
   const clockedIn = status.clocked_in;
 
   return (
     <div>
+      {camera && <SelfieCamera label={clockedIn ? "Clock out" : "Clock in"} onDone={camera} />}
       <button
         onClick={punch}
         disabled={busy}
@@ -106,7 +115,7 @@ export default function ClockButton() {
         </p>
       )}
       {phase === "idle" && status.geofence && (
-        <p className="mt-2 text-center text-xs text-neutral-400">Must be at the restaurant. A photo is taken.</p>
+        <p className="mt-2 text-center text-xs text-neutral-400">Must be at the restaurant. A photo of your face is taken.</p>
       )}
     </div>
   );
