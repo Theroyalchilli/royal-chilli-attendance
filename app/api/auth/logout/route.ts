@@ -1,9 +1,8 @@
-import { NextResponse } from "next/server";
-import { getSessionCookieOptions } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { clearSessionCookie } from "@/lib/auth";
 
-export async function POST() {
-  const { name, options } = getSessionCookieOptions();
+export async function POST(req: NextRequest) {
   const res = NextResponse.json({ success: true });
-  res.cookies.set(name, "", { ...options, maxAge: 0 });
+  clearSessionCookie(res, req.headers.get("host"));
   return res;
 }

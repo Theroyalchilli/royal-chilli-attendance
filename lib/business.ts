@@ -1,5 +1,6 @@
 import supabase from "./supabase";
 import { DEFAULT_BUSINESS_ID } from "./business-id";
+import { baseDomain } from "./app-hosts";
 
 // Several independent businesses share one database (royal-chilli-pos
 // migrations 076–079). Each staff member belongs to exactly one business
@@ -28,17 +29,19 @@ export async function staffIdsAt(businessId: number): Promise<number[]> {
   return (data ?? []).map((r) => r.id as number);
 }
 
-export type BusinessRow = { id: number; name: string; active: boolean };
+export type BusinessRow = { id: number; name: string; active: boolean; domain: string | null; custom_domain: string | null; logo_url: string | null };
+
+const BUSINESS_COLUMNS = "id, name, active, domain, custom_domain, logo_url";
 
 /** Every business, in display order (the owner's switcher). */
 export async function listBusinesses(): Promise<BusinessRow[]> {
-  const { data, error } = await supabase.from("businesses").select("id, name, active").order("display_order").order("id");
+  const { data, error } = await supabase.from("businesses").select(BUSINESS_COLUMNS).order("display_order").order("id");
   if (error) throw error;
   return (data ?? []) as BusinessRow[];
 }
 
 export async function getBusiness(id: number): Promise<BusinessRow | null> {
-  const { data } = await supabase.from("businesses").select("id, name, active").eq("id", id).maybeSingle();
+  const { data } = await supabase.from("businesses").select(BUSINESS_COLUMNS).eq("id", id).maybeSingle();
   return (data as BusinessRow | null) ?? null;
 }
 
@@ -49,4 +52,16 @@ export async function headerBusiness(session: { businessId: number; owner?: bool
     return { name: all.find((b) => b.id === session.businessId)?.name ?? "", switcher: all };
   }
   return { name: (await getBusiness(session.businessId).catch(() => null))?.name ?? "", switcher: undefined };
+}
+
+/**
+ * The business on this address (attendance.melthouse.co.uk -> Melt House), or
+ * null. www./pos./staff./attendance. are ignored — same rule as the POS.
+ */
+export async function businessForHost(host: string | null | undefined): Promise<BusinessRow | null> {
+  if (!host) return null;
+  const h = baseDomain(host);
+  return (await listBusinesses().catch(() => [])).find((b) =>
+    [b.domain, b.custom_domain].some((d) => d && baseDomain(d) === h)
+  ) ?? null;
 }

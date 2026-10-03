@@ -1,13 +1,14 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { sessionCookieDomain } from "./app-hosts";
 import type { SessionUser } from "./types";
 import { DEFAULT_BUSINESS_ID } from "./business-id";
 
-// Same secret + payload shape + cookie name as royal-chilli-pos, so once both
-// apps live on *.royalchilli.com (with the cookie domain set to .royalchilli.com)
-// a manager who logs into either one is signed into the other. During the
-// *.vercel.app phase the cookie is per-origin, so each app logs in on its own.
+// Same secret + payload shape + cookie name as royal-chilli-pos. On a
+// business's pos./staff./attendance. subdomains the cookie covers the whole
+// business domain (lib/app-hosts.ts), so one sign-in works in both apps; on
+// *.vercel.app it stays per-origin and each app logs in on its own.
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "royal-chilli-pos-fallback-secret-key-2024"
 );
@@ -56,7 +57,8 @@ export async function getSessionFromRequest(req: NextRequest): Promise<SessionUs
   return verify(req.cookies.get(COOKIE_NAME)?.value);
 }
 
-export function getSessionCookieOptions() {
+export function getSessionCookieOptions(host?: string | null) {
+  const domain = sessionCookieDomain(host);
   return {
     name: COOKIE_NAME,
     options: {
@@ -65,9 +67,19 @@ export function getSessionCookieOptions() {
       sameSite: "lax" as const,
       maxAge: 60 * 60 * 12,
       path: "/",
-      // Set COOKIE_DOMAIN=.royalchilli.com in BOTH apps once they're on the
-      // subdomains — then a manager login in either signs them into the other.
-      ...(process.env.COOKIE_DOMAIN ? { domain: process.env.COOKIE_DOMAIN } : {}),
+      ...(domain ? { domain } : {}),
     },
   };
+}
+
+/**
+ * Signs the person out on this address: clears the business-wide cookie and
+ * any older one tied to just this host, so neither keeps them signed in.
+ */
+export function clearSessionCookie(res: NextResponse, host?: string | null) {
+  const { name, options } = getSessionCookieOptions(host);
+  res.cookies.set(name, "", { ...options, maxAge: 0 });
+  if (options.domain) {
+    res.headers.append("Set-Cookie", `${name}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${options.secure ? "; Secure" : ""}`);
+  }
 }
