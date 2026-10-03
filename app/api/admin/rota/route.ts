@@ -6,18 +6,21 @@ import { requireManager } from "@/lib/guard";
 import { audit } from "@/lib/attendance-write";
 import { alertShiftAdded, alertShiftChanged } from "@/lib/rota-alerts";
 import { getAttendanceSettings, localDateString } from "@/lib/settings";
+import { NOT_ON_ROTA, isOnRota } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
 // Usual patterns for the modal's defaults. Falls back to the single-slot
 // columns until POS migration 066 (rota_start_2/rota_end_2) has been run.
-// Staff who work at this business.
+// Staff who work at this business and go on the rota (not Super admin,
+// Supervisor or HR — lib/roles.ts).
 async function loadActiveStaffRotas(businessId: number) {
   const here = await staffIdsAt(businessId);
   const cols = "id, name, rota_start, rota_end, rota_working_days";
-  const r = await supabase.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1).in("id", here).order("name");
+  const notOnRota = `(${NOT_ON_ROTA.join(",")})`;
+  const r = await supabase.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1).in("id", here).not("role", "in", notOnRota).order("name");
   if (!r.error) return r;
-  return supabase.from("staff").select(cols).eq("active", 1).in("id", here).order("name");
+  return supabase.from("staff").select(cols).eq("active", 1).in("id", here).not("role", "in", notOnRota).order("name");
 }
 
 function weekDays(weekStart: string): string[] {
@@ -89,6 +92,10 @@ export async function POST(req: NextRequest) {
   const b = await req.json();
   const id = b.id ? Number(b.id) : null;
   const staffId = Number(b.staff_id);
+  const { data: person } = await supabase.from("staff").select("role").eq("id", staffId).maybeSingle();
+  if (person && !isOnRota(person.role)) {
+    return NextResponse.json({ error: "Super admin, Supervisor and HR don't go on the rota" }, { status: 400 });
+  }
   const date = String(b.shift_date || "");
   const start = String(b.start_time || "");
   const end = String(b.end_time || "");

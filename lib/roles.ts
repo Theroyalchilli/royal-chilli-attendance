@@ -23,3 +23,8 @@ export const isManagerLevel = (role: string) => role === "admin" || role === "su
 
 /** Hands-on manager (food safety edits, training records): Supervisor or Manager. */
 export const isHandsOnManager = (role: string) => role === "supervisor" || role === "manager";
+
+/** Roles that never appear on the rota (agreed 2026-10-03): Super admin,
+ *  Supervisor and HR. Manager, Front House and Kitchen do. */
+export const NOT_ON_ROTA = ["admin", "supervisor", "hr"] as const;
+export const isOnRota = (role: string) => !(NOT_ON_ROTA as readonly string[]).includes(role);

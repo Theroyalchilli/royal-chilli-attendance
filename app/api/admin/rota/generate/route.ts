@@ -4,6 +4,7 @@ import { staffIdsAt } from "@/lib/business";
 import { requireManager } from "@/lib/guard";
 import { alertRotaReady } from "@/lib/rota-alerts";
 import { localIsoWeekday, getAttendanceSettings, localDateString } from "@/lib/settings";
+import { NOT_ON_ROTA } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +34,11 @@ export async function POST(req: NextRequest) {
 
   // second slot = split-shift pattern (POS migration 066); fall back without it
   const cols = "id, rota_start, rota_end, rota_working_days";
-  const withSecond = await db.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1).in("id", await staffIdsAt(g.session.businessId));
-  const staff = (withSecond.error ? (await db.from("staff").select(cols).eq("active", 1).in("id", await staffIdsAt(g.session.businessId))).data : withSecond.data) as
+  // Not Super admin, Supervisor or HR — they don't go on the rota.
+  const notOnRota = `(${NOT_ON_ROTA.join(",")})`;
+  const here = await staffIdsAt(g.session.businessId);
+  const withSecond = await db.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1).in("id", here).not("role", "in", notOnRota);
+  const staff = (withSecond.error ? (await db.from("staff").select(cols).eq("active", 1).in("id", here).not("role", "in", notOnRota)).data : withSecond.data) as
     | { id: number; rota_start: string | null; rota_end: string | null; rota_start_2?: string | null; rota_end_2?: string | null; rota_working_days: number[] | null }[]
     | null;
 
