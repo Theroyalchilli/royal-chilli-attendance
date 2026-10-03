@@ -1,7 +1,7 @@
 import type { StaffRole } from "./types";
 import { isHandsOnManager, isManagerLevel, isOwnPagesOnly } from "./roles";
 
-// Front House and Kitchen count as "employee" here; Supervisor as "manager".
+// Front House and Kitchen count as "employee" here.
 //
 // Deliberately not the same shape as the rest of this app's permissions —
 // see HANDOVER.md §2/§3: HR is excluded from this module entirely (food

@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   // second slot = split-shift pattern (POS migration 066); fall back without it
   const cols = "id, rota_start, rota_end, rota_working_days";
-  // Not Super admin, Supervisor or HR — they don't go on the rota.
+  // Not Super admin or HR — they don't go on the rota.
   const notOnRota = `(${NOT_ON_ROTA.join(",")})`;
   const here = await staffIdsAt(g.session.businessId);
   const withSecond = await db.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1).in("id", here).not("role", "in", notOnRota);

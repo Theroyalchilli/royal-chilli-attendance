@@ -14,7 +14,7 @@ const JWT_SECRET = new TextEncoder().encode(
 );
 
 const COOKIE_NAME = "pos_session";
-const VALID_ROLES = new Set<SessionUser["role"]>(["employee", "kitchen", "manager", "supervisor", "hr", "admin"]);
+const VALID_ROLES = new Set<SessionUser["role"]>(["employee", "kitchen", "manager", "hr", "admin"]);
 
 export async function createSession(user: SessionUser): Promise<string> {
   return new SignJWT({ id: user.id, name: user.name, role: user.role, bid: user.businessId, ...(user.owner ? { own: true } : {}) })

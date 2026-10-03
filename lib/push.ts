@@ -67,7 +67,7 @@ export async function sendPush(staffIds: number[], msg: PushMessage): Promise<nu
 
 /** Everyone at this business who can act on manager things (manager / hr / admin). */
 export async function managerIds(businessId: number): Promise<number[]> {
-  const { data } = await supabase.from("staff").select("id").eq("active", 1).in("role", ["supervisor", "manager", "hr", "admin"])
+  const { data } = await supabase.from("staff").select("id").eq("active", 1).in("role", ["manager", "hr", "admin"])
     .in("id", await staffIdsAt(businessId));
   return (data ?? []).map((s) => s.id);
 }

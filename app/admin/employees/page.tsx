@@ -57,7 +57,7 @@ export default function EmployeesPage() {
           className="flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm"
         >
           <option value="">All roles</option>
-          {["admin", "supervisor", "manager", "hr", "employee", "kitchen"].map((r) => (
+          {["admin", "manager", "hr", "employee", "kitchen"].map((r) => (
             <option key={r} value={r}>{ROLE_LABEL[r]}</option>
           ))}
         </select>
