@@ -29,9 +29,9 @@ export async function staffIdsAt(businessId: number): Promise<number[]> {
   return (data ?? []).map((r) => r.id as number);
 }
 
-export type BusinessRow = { id: number; name: string; active: boolean; domain: string | null; custom_domain: string | null; logo_url: string | null };
+export type BusinessRow = { id: number; name: string; active: boolean; domain: string | null; custom_domain: string | null; logo_url: string | null; login_code: string | null };
 
-const BUSINESS_COLUMNS = "id, name, active, domain, custom_domain, logo_url";
+const BUSINESS_COLUMNS = "id, name, active, domain, custom_domain, logo_url, login_code";
 
 /** Every business, in display order (the owner's switcher). */
 export async function listBusinesses(): Promise<BusinessRow[]> {
