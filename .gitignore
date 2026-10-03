@@ -31,3 +31,6 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# MediaPipe engine, copied from node_modules at build (scripts/copy-mediapipe.mjs)
+/public/mediapipe/wasm/

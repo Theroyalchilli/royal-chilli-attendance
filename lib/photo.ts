@@ -38,3 +38,13 @@ export async function signedPhotoUrl(path: string, seconds = 300): Promise<strin
   const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, seconds);
   return data?.signedUrl ?? null;
 }
+
+/** Signed URLs for many photos at once (attendance list thumbnails). */
+export async function signedPhotoUrls(paths: string[], seconds = 600): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const unique = [...new Set(paths.filter(Boolean))];
+  if (unique.length === 0) return out;
+  const { data } = await supabase.storage.from(BUCKET).createSignedUrls(unique, seconds);
+  for (const d of data ?? []) if (d.path && d.signedUrl) out.set(d.path, d.signedUrl);
+  return out;
+}

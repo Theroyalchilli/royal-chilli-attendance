@@ -58,7 +58,9 @@ export async function GET(req: NextRequest) {
   });
 }
 
-type Body = { photo?: string | null; lat?: number; lng?: number };
+// face: the phone saw a face before taking the photo (true), or it
+// couldn't check and the person tapped "Take photo" (false).
+type Body = { photo?: string | null; face?: boolean | null; lat?: number; lng?: number };
 
 // POST — clock in or out for the signed-in person, from their own device.
 export async function POST(req: NextRequest) {
@@ -165,6 +167,7 @@ ${note}` : note,
           clock_out: now.toISOString(),
           clock_out_method: "web",
           clock_out_photo: photoPath,
+          clock_out_face: photoPath ? body.face === true : null,
           clock_out_lat: lat,
           clock_out_lng: lng,
           status: "clocked_out",
@@ -213,6 +216,7 @@ ${note}` : note,
         clock_in: now.toISOString(),
         clock_in_method: "web",
         clock_in_photo: photoPath,
+        clock_in_face: photoPath ? body.face === true : null,
         clock_in_lat: lat,
         clock_in_lng: lng,
         status: "clocked_in",

@@ -30,6 +30,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     patch.approved_at = body.approval_status === "approved" ? new Date().toISOString() : null;
   }
 
+  // Manager's check of the clock photos: "ok", "invalid" (not a real face
+  // photo), or null to clear.
+  if ("photo_review" in body && (body.photo_review === null || ["ok", "invalid"].includes(body.photo_review))) {
+    patch.photo_review = body.photo_review;
+    patch.photo_reviewed_by = body.photo_review ? g.session.id : null;
+    patch.photo_reviewed_at = body.photo_review ? new Date().toISOString() : null;
+  }
+
   if (Object.keys(patch).length === 0) return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
 
   if (patch.clock_in && patch.clock_out && new Date(patch.clock_out as string) <= new Date(patch.clock_in as string)) {

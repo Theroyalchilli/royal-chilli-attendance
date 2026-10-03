@@ -3,12 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/copy-mediapipe.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-mediapipe.mjs",
     "build": "next build",
     "start": "next start",
     "test": "jest"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.1",
     "@supabase/supabase-js": "^2.110.2",
     "bcryptjs": "^3.0.2",
     "jose": "^5.10.0",

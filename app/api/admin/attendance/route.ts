@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { bizDb } from "@/lib/business-db";
 import { staffIdsAt } from "@/lib/business";
 import { requireManager } from "@/lib/guard";
+import { signedPhotoUrls } from "@/lib/photo";
 import { getAttendanceSettings, localDateString } from "@/lib/settings";
 import { loadStaffRota, resolveScheduleFor } from "@/lib/rota";
 import { recompute, audit } from "@/lib/attendance-write";
@@ -93,9 +94,15 @@ export async function GET(req: NextRequest) {
     rotaByKey.get(key)!.push(`${s.start_time.slice(0, 5)} – ${s.end_time.slice(0, 5)}`);
   }
 
+  // Small clock-in / clock-out photos for the list (at most 200 rows signed).
+  const photoPaths = (rows ?? []).slice(0, 200).flatMap((r) => [r.clock_in_photo, r.clock_out_photo]).filter((p): p is string => !!p);
+  const urls = await signedPhotoUrls(photoPaths).catch(() => new Map<string, string>());
+
   return NextResponse.json({
     rows: (rows ?? []).map((r) => ({
       ...r,
+      in_photo_url: r.clock_in_photo ? urls.get(r.clock_in_photo) ?? null : null,
+      out_photo_url: r.clock_out_photo ? urls.get(r.clock_out_photo) ?? null : null,
       staff_name: nameById.get(r.staff_id) ?? "?",
       rota: rotaByKey.get(`${r.staff_id}-${r.work_date}`)?.join(", ") ?? null,
       // the one shift this session was clocked against (split-shift days)
