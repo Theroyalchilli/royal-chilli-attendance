@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { isOwnPagesOnly } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -7,5 +8,5 @@ export const dynamic = "force-dynamic";
 // their dashboard, or the login form if they're signed out.
 export default async function RootPage() {
   const session = await getSession();
-  redirect(session ? (session.role === "employee" ? "/me" : "/admin") : "/login");
+  redirect(session ? (isOwnPagesOnly(session.role) ? "/me" : "/admin") : "/login");
 }

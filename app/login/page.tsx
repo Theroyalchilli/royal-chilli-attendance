@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { isOwnPagesOnly } from "@/lib/roles";
 
-const dest = (role: string) => (role === "employee" ? "/me" : "/admin");
+const dest = (role: string) => (isOwnPagesOnly(role) ? "/me" : "/admin");
 
 export default function LoginPage() {
   const router = useRouter();

@@ -3,6 +3,7 @@ import { SignJWT } from "jose";
 import { getSessionFromRequest } from "@/lib/auth";
 import { getBusiness } from "@/lib/business";
 import { appUrl } from "@/lib/app-hosts";
+import { isOwnPagesOnly } from "@/lib/roles";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "royal-chilli-pos-fallback-secret-key-2024"
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.redirect(new URL("/login", req.url));
   // Employees have no Staff Hub, and the till is PIN-only on paired devices.
-  if (session.role === "employee") return NextResponse.redirect(new URL("/me", req.url));
+  if (isOwnPagesOnly(session.role)) return NextResponse.redirect(new URL("/me", req.url));
 
   const token = await new SignJWT({ id: session.id, name: session.name, role: session.role, bid: session.businessId, ...(session.owner ? { own: true } : {}), purpose: "sso" })
     .setProtectedHeader({ alg: "HS256" })

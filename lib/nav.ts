@@ -1,4 +1,5 @@
 import type { StaffRole } from "./types";
+import { isManagerLevel, isOwnPagesOnly } from "./roles";
 
 // `group` clusters items under a shared heading inside BottomNav's "More"
 // sheet (e.g. Tasks/Allergens/My Training under "Food Safety").
@@ -13,7 +14,7 @@ export type NavGroup = { label?: string; items: NavItem[]; badge?: "approvals" }
 // same items flattened). Managers/hr/admin see the team console AND their own
 // pages, so they never lose the nav when they open their rota/payslips.
 export function navFor(role: StaffRole): NavGroup[] {
-  if (role === "employee") {
+  if (isOwnPagesOnly(role)) {
     // The first 4 are the BottomNav's direct slots; the rest go in its "More".
     return [
       {
@@ -60,7 +61,7 @@ export function navFor(role: StaffRole): NavGroup[] {
       items: [
         { href: "/admin/employees", label: "Employees", icon: "👥" },
         // managers and admins can message staff (phone + bell)
-        ...(role === "manager" || role === "admin" ? [{ href: "/admin/messages", label: "Messages", icon: "📣" }] : []),
+        ...(isManagerLevel(role) ? [{ href: "/admin/messages", label: "Messages", icon: "📣" }] : []),
       ],
     },
   ];

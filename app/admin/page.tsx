@@ -7,6 +7,7 @@ import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 import { hm } from "@/lib/format";
 import { SHIFT_STATUS_BADGE, SHIFT_STATUS_LABEL, type ShiftStatus } from "@/lib/shift-status";
+import { roleLabel } from "@/lib/roles";
 
 type Dash = {
   today: string;
@@ -94,7 +95,7 @@ export default function AdminDashboard() {
                 <div key={i} className="flex items-center justify-between gap-2 flex-wrap text-sm">
                   <div className="min-w-0">
                     <span className="font-medium truncate">{s.staff_name}</span>
-                    {s.role && <span className="ml-2 text-xs capitalize text-neutral-400">{s.role}</span>}
+                    {s.role && <span className="ml-2 text-xs text-neutral-400">{roleLabel(s.role)}</span>}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap justify-end">
                     <span className="text-neutral-500 whitespace-nowrap">{s.start} – {s.end}</span>

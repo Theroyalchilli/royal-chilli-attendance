@@ -10,12 +10,12 @@ import ChangePasswordModal from "./ChangePasswordModal";
 import BusinessSwitcher, { type SwitcherOption } from "./BusinessSwitcher";
 import type { SessionUser } from "@/lib/types";
 import type { NavGroup, NavItem } from "@/lib/nav";
+import { ROLE_LABEL, isOwnPagesOnly } from "@/lib/roles";
 
 /** Up to two initials, for a business with no logo yet ("Melt House" -> "MH"). */
 const initials = (name: string) =>
   name.split(/\s+/).filter((w) => /^[A-Za-z0-9]/.test(w) && w.toLowerCase() !== "the").slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "?";
 
-const ROLE_LABEL: Record<string, string> = { employee: "Employee", manager: "Manager", hr: "HR", admin: "Admin" };
 
 // Top menu bar, same look as the POS Staff Hub. On a computer each group's
 // list opens when the mouse is over it (CSS, .top-mi in globals.css) or on
@@ -42,7 +42,7 @@ export default function Shell({
   const [profileOpen, setProfileOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const barRef = useRef<HTMLElement>(null);
-  const isEmployee = user.role === "employee";
+  const isEmployee = isOwnPagesOnly(user.role);
   const bizName = business?.name || "The Royal Chilli";
 
   useEffect(() => {
