@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
     const owner = (await staffHome(data.id)).isOwner;
     const token = await createSession({ id: data.id, name: data.name, role: data.role as StaffRole, businessId, ...(owner ? { owner: true } : {}) });
-    const { name: cookieName, options } = getSessionCookieOptions();
+    const { name: cookieName, options } = getSessionCookieOptions(req.headers.get("host"));
 
     const res = NextResponse.json({ success: true, user: { id: data.id, name: data.name, role: data.role } });
     res.cookies.set(cookieName, token, options);

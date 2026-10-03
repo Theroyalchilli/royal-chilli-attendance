@@ -11,6 +11,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [brand, setBrand] = useState<{ name: string; logoUrl: string | null }>({ name: "Royal Chilli", logoUrl: null });
+
+  // Which business's sign-in this is, from the address (attendance.<domain>).
+  useEffect(() => {
+    fetch("/api/auth/brand")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.name && setBrand(d))
+      .catch(() => {});
+  }, []);
 
   // Already signed in? Skip the form.
   useEffect(() => {
@@ -47,10 +56,15 @@ export default function LoginPage() {
     <main className="grid min-h-dvh place-items-center bg-cream px-6">
       <form onSubmit={submit} className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand/10 text-lg">📋</span>
+          {brand.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={brand.logoUrl} alt="" className="h-9 w-9 rounded-lg object-contain" />
+          ) : (
+            <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand/10 text-lg">📋</span>
+          )}
           <h1 className="text-lg font-semibold">Staff Attendance</h1>
         </div>
-        <p className="mt-2 text-sm text-neutral-500">Sign in with your Royal Chilli username and password.</p>
+        <p className="mt-2 text-sm text-neutral-500">Sign in with your {brand.name} username and password.</p>
 
         <input
           value={username}

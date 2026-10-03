@@ -241,7 +241,7 @@ export default function Shell({
                 </div>
               ))}
               <h4 className="mx-2 mb-1 mt-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">Account</h4>
-              {itemLink(staffHub, drawerLink(false))}
+              {!isEmployee && itemLink(staffHub, drawerLink(false))}
               {accountItems(drawerLink)}
             </nav>
           </aside>

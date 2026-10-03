@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
       ...(payload.own === true ? { owner: true } : {}),
     };
     const sessionToken = await createSession(user);
-    const { name: cookieName, options } = getSessionCookieOptions();
+    const { name: cookieName, options } = getSessionCookieOptions(req.headers.get("host"));
 
     const response = NextResponse.redirect(new URL("/admin", req.url));
     response.cookies.set(cookieName, sessionToken, options);
