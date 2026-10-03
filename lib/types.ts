@@ -1,5 +1,5 @@
-// Matches royal-chilli-pos's `staff.role` (migration 032): 4 roles.
-export type StaffRole = "employee" | "manager" | "hr" | "admin";
+// Matches royal-chilli-pos's `staff.role`: six roles (names in lib/roles.ts).
+export type StaffRole = "employee" | "kitchen" | "manager" | "supervisor" | "hr" | "admin";
 
 export type SessionUser = {
   id: number;

@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     .select("endpoint, user_agent, created_at")
     .eq("staff_id", session.id)
     .order("created_at", { ascending: false });
-  const isManager = ["manager", "hr", "admin"].includes(session.role);
+  const isManager = ["supervisor", "manager", "hr", "admin"].includes(session.role);
   return NextResponse.json({ prefs, devices: devices ?? [], isManager });
 }
 

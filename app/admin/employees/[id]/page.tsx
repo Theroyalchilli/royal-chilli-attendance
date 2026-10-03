@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { hm, dayLabel, clockTime } from "@/lib/format";
 import { confirmDelete } from "@/components/ui/confirm";
+import { ROLE_LABEL } from "@/lib/roles";
 
 type Staff = {
   id: number;
@@ -70,7 +71,6 @@ type Profile = {
   payroll: PayrollEntry[];
 };
 
-const ROLE_LABEL: Record<string, string> = { employee: "Employee", manager: "Manager", hr: "HR", admin: "Admin" };
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const STATUS_BADGE: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { ROLE_LABEL } from "@/lib/roles";
 
 type Employee = {
   id: number;
@@ -13,7 +14,6 @@ type Employee = {
   active: number;
 };
 
-const ROLE_LABEL: Record<string, string> = { employee: "Employee", manager: "Manager", hr: "HR", admin: "Admin" };
 
 export default function EmployeesPage() {
   const [q, setQ] = useState("");
@@ -57,10 +57,9 @@ export default function EmployeesPage() {
           className="flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm"
         >
           <option value="">All roles</option>
-          <option value="admin">Admin</option>
-          <option value="hr">HR</option>
-          <option value="manager">Manager</option>
-          <option value="employee">Employee</option>
+          {["admin", "supervisor", "manager", "hr", "employee", "kitchen"].map((r) => (
+            <option key={r} value={r}>{ROLE_LABEL[r]}</option>
+          ))}
         </select>
         <select
           value={active}

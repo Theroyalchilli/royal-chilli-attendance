@@ -1,5 +1,8 @@
 import type { StaffRole } from "./types";
+import { isHandsOnManager, isManagerLevel, isOwnPagesOnly } from "./roles";
 
+// Front House and Kitchen count as "employee" here; Supervisor as "manager".
+//
 // Deliberately not the same shape as the rest of this app's permissions —
 // see HANDOVER.md §2/§3: HR is excluded from this module entirely (food
 // safety is a kitchen operation, not a people one), and sign-off is
@@ -15,36 +18,36 @@ import type { StaffRole } from "./types";
 // friction with no real separation-of-duties benefit.
 
 export function canViewFoodSafety(role: StaffRole): boolean {
-  return role === "employee" || role === "manager" || role === "admin";
+  return isOwnPagesOnly(role) || isManagerLevel(role);
 }
 
 export function canLogFoodSafety(role: StaffRole): boolean {
-  return role === "employee" || role === "manager" || role === "admin";
+  return isOwnPagesOnly(role) || isManagerLevel(role);
 }
 
 export function canSignoffFoodSafety(role: StaffRole, canSignoffFlag: boolean): boolean {
-  if (role === "manager" || role === "admin") return true;
-  if (role === "employee") return canSignoffFlag;
+  if (isManagerLevel(role)) return true;
+  if (isOwnPagesOnly(role)) return canSignoffFlag;
   return false; // hr (no access) never signs off
 }
 
 // Trace (deliveries + approved-supplier register) — unlike Tasks, employees
 // have no access to this at all, per HANDOVER.md §3's role table.
 export function canViewTrace(role: StaffRole): boolean {
-  return role === "manager" || role === "admin";
+  return isManagerLevel(role);
 }
 export function canEditTrace(role: StaffRole): boolean {
-  return role === "manager";
+  return isHandsOnManager(role);
 }
 
 // Team/training — everyone with any access sees the whole team's status;
 // only a manager can record a new completion. Employees don't use this at
 // all (they only ever see their own record, via /me/food-safety/training).
 export function canViewTeamTraining(role: StaffRole): boolean {
-  return role === "manager" || role === "admin";
+  return isManagerLevel(role);
 }
 export function canRecordTraining(role: StaffRole): boolean {
-  return role === "manager";
+  return isHandsOnManager(role);
 }
 
 // Config (check/temp task list, training courses) — the doc puts this
@@ -52,7 +55,7 @@ export function canRecordTraining(role: StaffRole): boolean {
 // not day-to-day operation). Extended to Manager too on request; still
 // excludes Employee and HR entirely.
 export function canEditFoodSafetyConfig(role: StaffRole): boolean {
-  return role === "manager" || role === "admin";
+  return isManagerLevel(role);
 }
 
 // Records (the SFBB-style day-by-day export). The doc actually splits this
@@ -60,5 +63,5 @@ export function canEditFoodSafetyConfig(role: StaffRole): boolean {
 // — but given Manager already has full access everywhere else in this
 // module, both get full view + export here too, same as Config.
 export function canViewFoodSafetyRecords(role: StaffRole): boolean {
-  return role === "manager" || role === "admin";
+  return isManagerLevel(role);
 }
