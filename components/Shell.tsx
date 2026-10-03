@@ -79,6 +79,9 @@ export default function Shell({
   }
 
   const toggle = (key: string) => setOpenMenu((m) => (m === key ? null : key));
+  // Moving the mouse onto another group closes one opened by a click, so only
+  // one list is ever showing (and it doesn't pop back on the way out).
+  const hoverGroup = (key: string) => setOpenMenu((m) => (m && m !== key ? null : m));
 
   // /api/sso/staffhub redirects into a different app (the POS) — Link's
   // client-side navigation (which fetches it as an RSC payload) intermittently
@@ -140,10 +143,15 @@ export default function Shell({
             </span>
           </Link>
 
-          {business?.switcher && <BusinessSwitcher current={user.businessId} options={business.switcher} className="hidden lg:flex" />}
+          {business?.switcher && <BusinessSwitcher current={user.businessId} options={business.switcher} className="hidden xl:flex" />}
 
           {/* Computer: the menu row */}
-          <nav className="ml-auto hidden items-center gap-0.5 md:flex" aria-label="Main">
+          {/* The full row needs ~1,200px for managers (business switcher, five menus,
+              bell, Staff Hub, profile) — narrower, it squashed and wrapped and the
+              owner's switcher vanished between 768 and 1,023px. So below xl they
+              get the bell + ☰ drawer, which has everything. Employees' short row
+              keeps the md breakpoint (their phones use the bottom bar). */}
+          <nav className={`ml-auto hidden items-center gap-0.5 ${isEmployee ? "md:flex" : "xl:flex"}`} aria-label="Main">
             {nav.map((g, gi) =>
               !g.label ? (
                 g.items.map((n) => (
@@ -153,7 +161,7 @@ export default function Shell({
                   </Link>
                 ))
               ) : (
-                <div key={gi} className={`top-mi relative ${openMenu === g.label ? "open" : ""}`}>
+                <div key={gi} onMouseEnter={() => hoverGroup(g.label!)} className={`top-mi relative ${openMenu === g.label ? "open" : ""}`}>
                   <button type="button" onClick={() => toggle(g.label!)} aria-expanded={openMenu === g.label}
                     className={`${topBtn} ${groupActive(g) ? "text-brand-dark" : "text-neutral-600"} hover:bg-[#F6F1E6]`}>
                     {g.label} {g.badge === "approvals" && badge(approvals)} <span className="text-[10px] opacity-60">▼</span>
@@ -166,7 +174,7 @@ export default function Shell({
             )}
             <span className="ml-1"><NotificationBell /></span>
             {!isEmployee && itemLink({ ...staffHub, label: "Staff Hub ↗︎" }, `${topBtn} text-neutral-600 hover:bg-[#F6F1E6]`)}
-            <div className={`top-mi relative ${openMenu === "__acct" ? "open" : ""}`}>
+            <div onMouseEnter={() => hoverGroup("__acct")} className={`top-mi relative ${openMenu === "__acct" ? "open" : ""}`}>
               <button type="button" onClick={() => toggle("__acct")} aria-label="Account"
                 className="ml-1 grid h-9 w-9 place-items-center rounded-full bg-brand-dark text-sm font-semibold text-white">
                 {user.name.charAt(0).toUpperCase()}
@@ -182,7 +190,7 @@ export default function Shell({
           </nav>
 
           {/* Phone */}
-          <span className="ml-auto flex items-center gap-1.5 md:hidden">
+          <span className={`ml-auto flex items-center gap-1.5 ${isEmployee ? "md:hidden" : "xl:hidden"}`}>
             <span className={isEmployee ? "[&_button]:text-white [&_button:hover]:bg-white/15" : ""}>
               <NotificationBell />
             </span>
@@ -220,9 +228,9 @@ export default function Shell({
       {!isEmployee && (
         <>
           <div onClick={() => setDrawerOpen(false)}
-            className={`fixed inset-0 z-40 bg-black/40 transition-opacity motion-reduce:transition-none md:hidden ${drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"}`} />
+            className={`fixed inset-0 z-40 bg-black/40 transition-opacity motion-reduce:transition-none ${isEmployee ? "md:hidden" : "xl:hidden"} ${drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"}`} />
           <aside aria-hidden={!drawerOpen}
-            className={`fixed inset-y-0 right-0 z-50 flex w-[min(88vw,340px)] flex-col bg-white transition-transform duration-200 motion-reduce:transition-none md:hidden ${drawerOpen ? "translate-x-0" : "translate-x-full"}`}>
+            className={`fixed inset-y-0 right-0 z-50 flex w-[min(88vw,340px)] flex-col bg-white transition-transform duration-200 motion-reduce:transition-none ${isEmployee ? "md:hidden" : "xl:hidden"} ${drawerOpen ? "translate-x-0" : "translate-x-full"}`}>
             <div className="flex items-center justify-between border-b border-line px-4 py-3.5">
               <span className="text-[17px] font-bold">Menu</span>
               <button type="button" onClick={() => setDrawerOpen(false)} aria-label="Close menu" className="grid h-9 w-9 place-items-center rounded-lg text-xl">✕</button>
