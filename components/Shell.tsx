@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { freshStart } from "@/lib/auth-sync";
 import NotificationBell from "./NotificationBell";
 import BottomNav from "./BottomNav";
 import ChangePasswordModal from "./ChangePasswordModal";
@@ -36,7 +37,6 @@ export default function Shell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -74,8 +74,8 @@ export default function Shell({
   const groupActive = (g: NavGroup) => g.items.some((i) => active(i.href));
 
   async function signOut() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.replace("/login");
+    await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    freshStart("/login");
   }
 
   const toggle = (key: string) => setOpenMenu((m) => (m === key ? null : key));
