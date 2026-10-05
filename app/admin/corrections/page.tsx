@@ -22,6 +22,7 @@ export default function CorrectionsPage() {
   const [status, setStatus] = useState("pending");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
+  const [message, setMessage] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -36,11 +37,13 @@ export default function CorrectionsPage() {
   async function review(id: number, action: "approve" | "reject") {
     const note = action === "reject" ? prompt("Reason for rejecting (optional):") ?? "" : "";
     setBusy(id);
-    await fetch(`/api/admin/corrections/${id}`, {
+    setMessage("");
+    const res = await fetch(`/api/admin/corrections/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, review_note: note }),
     });
+    if (!res.ok) setMessage((await res.json().catch(() => ({}))).error || "Couldn't save that");
     setBusy(null);
     load();
   }
@@ -56,6 +59,9 @@ export default function CorrectionsPage() {
           <option value="all">All</option>
         </select>
       </div>
+
+      <p className="mt-2 text-xs text-neutral-500">A shift&apos;s times can be changed once only. Approving a correction locks that shift.</p>
+      {message && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">{message}</p>}
 
       {loading ? (
         <p className="mt-8 text-sm text-neutral-400">Loading…</p>

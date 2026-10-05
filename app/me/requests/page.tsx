@@ -49,7 +49,7 @@ export default function RequestsPage() {
 
 // ---------- Corrections ----------
 
-type Recent = { id: number; work_date: string; clock_in: string | null; clock_out: string | null };
+type Recent = { id: number; work_date: string; clock_in: string | null; clock_out: string | null; times_changed_at: string | null };
 type CorrectionReq = {
   id: number;
   attendance_id: number | null;
@@ -175,10 +175,10 @@ function CorrectionModal({ recent, onClose, onDone }: { recent: Recent[]; onClos
         <select value={attId} onChange={(e) => pick(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
           <option value="">Pick a day…</option>
           {recent.map((r) => (
-            <option key={r.id} value={r.id}>
+            <option key={r.id} value={r.id} disabled={!!r.times_changed_at}>
               {r.id === -1
                 ? `${dayLabel(r.work_date)} — not clocked in yet`
-                : `${dayLabel(r.work_date)} — in ${clockTime(r.clock_in)}, out ${r.clock_out ? clockTime(r.clock_out) : "—"}`}
+                : `${dayLabel(r.work_date)} — in ${clockTime(r.clock_in)}, out ${r.clock_out ? clockTime(r.clock_out) : "—"}${r.times_changed_at ? " · locked (already corrected)" : ""}`}
             </option>
           ))}
         </select>

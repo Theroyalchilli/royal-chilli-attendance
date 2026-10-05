@@ -3,6 +3,7 @@ import { bizDb } from "@/lib/business-db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { notifyManagers } from "@/lib/notify";
 import { getAttendanceSettings, localDateString } from "@/lib/settings";
+import { realTimeChanges, LOCKED_MESSAGE } from "@/lib/times-lock";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false }),
     db
       .from("attendance")
-      .select("id, work_date, clock_in, clock_out")
+      .select("id, work_date, clock_in, clock_out, times_changed_at")
       .eq("staff_id", session.id)
       .gte("work_date", thirtyDaysAgo)
       .order("work_date", { ascending: false }),
@@ -35,13 +36,14 @@ export async function GET(req: NextRequest) {
   // synthetic entry (id -1) that the POST handler creates a real row for.
   const recent = recentRows ?? [];
   const hasToday = recent.some((r) => r.work_date === today);
-  if (!hasToday) recent.unshift({ id: -1, work_date: today, clock_in: null, clock_out: null });
+  if (!hasToday) recent.unshift({ id: -1, work_date: today, clock_in: null, clock_out: null, times_changed_at: null });
 
   return NextResponse.json({ requests: mine ?? [], recent });
 }
 
 // POST { attendance_id, clock_in?, clock_out?, reason } — raise a correction on
-// one of my own attendance rows. Goes to the manager corrections queue.
+// one of my own attendance rows. Goes to the manager corrections queue. A
+// shift whose times were already changed once can't be corrected again.
 export async function POST(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -78,6 +80,7 @@ export async function POST(req: NextRequest) {
       .eq("staff_id", session.id) // can only correct your own
       .maybeSingle();
     if (!existingRow) return NextResponse.json({ error: "That day isn't one of yours" }, { status: 404 });
+    if (existingRow.times_changed_at) return NextResponse.json({ error: LOCKED_MESSAGE, locked: true }, { status: 409 });
     row = existingRow;
   }
 
@@ -86,6 +89,12 @@ export async function POST(req: NextRequest) {
   if (body.clock_out) change.clock_out = new Date(body.clock_out).toISOString();
   if (Object.keys(change).length === 0) {
     return NextResponse.json({ error: "Enter the corrected time(s)" }, { status: 400 });
+  }
+  // Only ask for what's actually different.
+  const different = realTimeChanges(row!, change);
+  for (const k of Object.keys(change)) if (!different.includes(k)) delete change[k];
+  if (Object.keys(change).length === 0) {
+    return NextResponse.json({ error: "Those are the times already recorded. Nothing to correct." }, { status: 400 });
   }
 
   // one open request per attendance row
