@@ -30,6 +30,8 @@ type Row = {
   in_photo_url: string | null;
   out_photo_url: string | null;
   notes: string | null;
+  /** Set once the times were changed (correction / edit) — locked after that. */
+  times_changed_at: string | null;
   is_stuck: boolean;
   rota: string | null;
   rota_shift: string | null;
@@ -378,6 +380,8 @@ function EditModal({ row, onClose, onSaved }: { row: Row; onClose: () => void; o
   const [breakOverride, setBreakOverride] = useState(row.break_override_minutes == null ? "" : String(row.break_override_minutes));
   const [adjustMin, setAdjustMin] = useState(String(Math.round(row.adjustment_seconds / 60)));
   const [notes, setNotes] = useState(row.notes ?? "");
+  // Times change once only; after that just the note, approval and photo check.
+  const locked = !!row.times_changed_at;
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [photo, setPhoto] = useState<{ leg: "in" | "out"; url: string } | null>(null);
@@ -419,25 +423,32 @@ function EditModal({ row, onClose, onSaved }: { row: Row; onClose: () => void; o
       <div className="w-full max-w-md rounded-2xl bg-white p-5">
         <h2 className="font-semibold">{row.staff_name}<span className="ml-2 text-sm font-normal text-neutral-400">{dayLabel(row.work_date)}</span></h2>
 
+        {locked ? (
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            🔒 Times locked — already changed once on {new Date(row.times_changed_at!).toLocaleDateString("en-GB")}. They can&apos;t be changed again.
+          </p>
+        ) : (
+          <p className="mt-3 text-xs text-neutral-500">Times can be changed once only. After you save a change they&apos;re locked.</p>
+        )}
         <div className="mt-4 grid grid-cols-2 gap-3">
           <label className="text-xs text-neutral-500">
             Clock in
-            <input type="datetime-local" value={clockIn} onChange={(e) => setClockIn(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900" />
+            <input type="datetime-local" value={clockIn} onChange={(e) => setClockIn(e.target.value)} disabled={locked} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900 disabled:bg-neutral-100 disabled:text-neutral-400" />
           </label>
           <label className="text-xs text-neutral-500">
             Clock out
-            <input type="datetime-local" value={clockOut} onChange={(e) => setClockOut(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900" />
+            <input type="datetime-local" value={clockOut} onChange={(e) => setClockOut(e.target.value)} disabled={locked} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900 disabled:bg-neutral-100 disabled:text-neutral-400" />
           </label>
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-3">
           <label className="text-xs text-neutral-500">
             Break override (min)
-            <input type="number" min={0} value={breakOverride} placeholder="rota default" onChange={(e) => setBreakOverride(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900" />
+            <input type="number" min={0} value={breakOverride} placeholder="rota default" onChange={(e) => setBreakOverride(e.target.value)} disabled={locked} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900 disabled:bg-neutral-100 disabled:text-neutral-400" />
           </label>
           <label className="text-xs text-neutral-500">
             Adjustment (± min)
-            <input type="number" value={adjustMin} onChange={(e) => setAdjustMin(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900" />
+            <input type="number" value={adjustMin} onChange={(e) => setAdjustMin(e.target.value)} disabled={locked} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900 disabled:bg-neutral-100 disabled:text-neutral-400" />
           </label>
         </div>
 
@@ -498,7 +509,7 @@ function EditModal({ row, onClose, onSaved }: { row: Row; onClose: () => void; o
             {busy ? "Saving…" : "Save"}
           </button>
         </div>
-        <button onClick={del} disabled={busy} className="mt-2 w-full text-xs text-red-500 hover:underline">Delete this entry</button>
+        {!locked && <button onClick={del} disabled={busy} className="mt-2 w-full text-xs text-red-500 hover:underline">Delete this entry</button>}
       </div>
     </div>
   );

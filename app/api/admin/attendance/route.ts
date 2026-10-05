@@ -115,6 +115,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST — manual entry: a manager records a shift someone forgot to clock.
+// Entering it is that shift's one change, so its times are locked from then.
 export async function POST(req: NextRequest) {
   const g = await requireManager(req);
   if ("res" in g) return g.res;
@@ -167,6 +168,8 @@ export async function POST(req: NextRequest) {
       approved_by: g.session.id,
       approved_at: new Date().toISOString(),
       entered_by: g.session.id,
+      times_changed_at: new Date().toISOString(),
+      times_changed_by: g.session.id,
       notes: body.notes || null,
       ...patch,
     })

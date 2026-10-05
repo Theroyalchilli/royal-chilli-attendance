@@ -4,6 +4,7 @@ import { requireManager } from "@/lib/guard";
 import { recomputeAndSave } from "@/lib/recompute-row";
 import { audit } from "@/lib/attendance-write";
 import { notify } from "@/lib/notify";
+import { keepOnlyRealTimeChanges, LOCKED_MESSAGE } from "@/lib/times-lock";
 
 const APPLIABLE = new Set([
   "clock_in",
@@ -49,8 +50,27 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const { data: attBefore } = await db.from("attendance").select("*").eq("id", corr.attendance_id).maybeSingle();
+  if (!attBefore) return NextResponse.json({ error: "That shift no longer exists" }, { status: 404 });
+
+  // Times can change only once. If they already have (another correction, or
+  // a manager edit since this was raised), this one can't apply — decline it.
+  const timesChanged = keepOnlyRealTimeChanges(attBefore, patch);
+  if (timesChanged.length > 0 && attBefore.times_changed_at) {
+    await db
+      .from("attendance_corrections")
+      .update({ status: "rejected", reviewed_by: g.session.id, reviewed_at: new Date().toISOString(), review_note: "Times already changed once — locked." })
+      .eq("id", id);
+    await audit(g.session.id, "correction_rejected", id, corr, null);
+    await notify(corr.staff_id, "correction_reviewed", "Your correction couldn't be applied: that shift's times were already changed once.", "/me/requests?tab=corrections");
+    return NextResponse.json({ error: LOCKED_MESSAGE, locked: true }, { status: 409 });
+  }
+  if (timesChanged.length > 0) {
+    patch.times_changed_at = new Date().toISOString();
+    patch.times_changed_by = g.session.id;
+  }
   patch.updated_at = new Date().toISOString();
-  await db.from("attendance").update(patch).eq("id", corr.attendance_id);
+  const { error: updErr } = await db.from("attendance").update(patch).eq("id", corr.attendance_id);
+  if (updErr) return NextResponse.json({ error: "Couldn't apply the correction" }, { status: 500 });
   const updated = await recomputeAndSave(corr.attendance_id);
 
   await db
