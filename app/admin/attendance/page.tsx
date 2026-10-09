@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { clockTime, dayLabel, hm } from "@/lib/format";
 import { SHIFT_STATUS_BADGE, SHIFT_STATUS_LABEL, type ShiftStatus } from "@/lib/shift-status";
-import { confirmDelete } from "@/components/ui/confirm";
+import { confirmDelete, confirmDialog } from "@/components/ui/confirm";
 
 type Row = {
   id: number;
@@ -37,7 +37,18 @@ type Row = {
   rota_shift: string | null;
 };
 type Staff = { id: number; name: string };
-type Pending = { staff_id: number; staff_name: string; work_date: string; shift_start: string; shift_end: string; status: ShiftStatus };
+type Pending = {
+  shift_id: number;
+  staff_id: number;
+  staff_name: string;
+  work_date: string;
+  shift_start: string;
+  shift_end: string;
+  status: ShiftStatus;
+  state: "pending" | "absent" | "leave" | "holiday" | "request_pending";
+  leave_type: string | null;
+  canMarkAbsent: boolean;
+};
 
 /** One person's day: every session they worked plus any shift still waiting on a clock-in. */
 type PersonDay = { staff_id: number; staff_name: string; sessions: Row[]; pending: Pending[] };
@@ -110,6 +121,9 @@ export default function AttendancePage() {
   const [adding, setAdding] = useState(false);
   const [quickClockIn, setQuickClockIn] = useState<Pending | null>(null);
   const [openTargetId, setOpenTargetId] = useState<number | null>(null);
+  const [sickLeaveTarget, setSickLeaveTarget] = useState<Pending | null>(null);
+  const [statusBusy, setStatusBusy] = useState<number | null>(null);
+  const [statusError, setStatusError] = useState("");
 
   const { from, to } = rangeFor(range, anchor);
 
@@ -166,6 +180,30 @@ export default function AttendancePage() {
     setAnchor((a) => (range === "day" ? addDays(a, n) : range === "week" ? addDays(a, n * 7) : addMonths(a, n)));
   }
   const rangeNoun = range === "day" ? "Day" : range === "week" ? "Week" : "Month";
+
+  async function updateShiftStatus(p: Pending, action: "absent" | "undo_absent" | "sick_leave", reason?: string) {
+    setStatusBusy(p.shift_id);
+    setStatusError("");
+    try {
+      const res = await fetch("/api/admin/attendance/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shift_id: p.shift_id, action, reason }),
+      });
+      if (!res.ok) {
+        setStatusError((await res.json().catch(() => ({}))).error || "Couldn't update this shift status.");
+        return false;
+      }
+      setSickLeaveTarget(null);
+      await load();
+      return true;
+    } catch {
+      setStatusError("Couldn't reach the server. Check your connection and try again.");
+      return false;
+    } finally {
+      setStatusBusy(null);
+    }
+  }
 
   const grouped = useMemo(() => {
     const m = new Map<string, Row[]>();
@@ -242,6 +280,7 @@ export default function AttendancePage() {
       <div className="mt-2 flex items-center gap-2 text-sm">
         <input type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5" />
       </div>
+      {statusError && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{statusError}</p>}
 
       {loading ? (
         <p className="mt-8 text-sm text-neutral-400">Loading…</p>
@@ -307,16 +346,41 @@ export default function AttendancePage() {
                           </tr>
                         )),
                         ...person.pending.map((p, i) => (
-                          <tr key={`pending-${p.staff_id}-${p.shift_start}`} className={`bg-amber-50/50 ${lineBorder(person.sessions.length === 0 && i === 0)}`}>
+                          <tr key={`pending-${p.shift_id}`} className={`${p.state === "leave" || p.state === "holiday" ? "bg-purple-50/50" : p.state === "absent" ? "bg-red-50/50" : "bg-amber-50/50"} ${lineBorder(person.sessions.length === 0 && i === 0)}`}>
                             {nameCell()}
                             <td className="px-3 py-2 text-neutral-500">{p.shift_start} – {p.shift_end}</td>
                             <td className="px-3 py-2 text-neutral-400">—</td>
                             <td className="px-3 py-2 text-neutral-400">—</td>
                             <td className="px-3 py-2 text-neutral-400">—</td>
                             <td className="px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SHIFT_STATUS_BADGE[p.status]}`}>{SHIFT_STATUS_LABEL[p.status]}</span>
-                                <button onClick={() => setQuickClockIn(p)} className="rounded-lg bg-brand px-2 py-1 text-xs font-semibold text-white hover:bg-brand-dark">Clock in now</button>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${p.state === "leave" || p.state === "holiday" || p.state === "request_pending" ? "bg-purple-100 text-purple-700" : p.state === "absent" || p.status === "Absent" ? SHIFT_STATUS_BADGE.Absent : SHIFT_STATUS_BADGE[p.status]}`}>
+                                  {p.state === "holiday" ? "Holiday" : p.state === "leave" ? `Leave · ${p.leave_type === "sick" ? "Sick" : p.leave_type === "unpaid" ? "Unpaid" : "Other"}` : p.state === "request_pending" ? `Leave requested · ${p.leave_type ?? "Review"}` : p.state === "absent" ? "Recorded absent" : SHIFT_STATUS_LABEL[p.status]}
+                                </span>
+                                {p.state === "absent" ? (
+                                  <button onClick={async () => {
+                                    if (await confirmDialog({ title: "Undo recorded absence?", message: `${p.staff_name}'s ${p.shift_start}–${p.shift_end} shift will return to scheduled.`, confirmLabel: "Undo absence" })) {
+                                      await updateShiftStatus(p, "undo_absent");
+                                    }
+                                  }} disabled={statusBusy === p.shift_id} className="rounded-lg border border-neutral-300 px-2 py-1 text-xs font-medium hover:bg-white disabled:opacity-50">
+                                    Undo
+                                  </button>
+                                ) : p.state === "pending" && p.canMarkAbsent ? (
+                                  <>
+                                    <button onClick={async () => {
+                                      if (await confirmDialog({ title: "Record absence?", message: `Mark ${p.staff_name}'s ${p.shift_start}–${p.shift_end} shift as missed?`, confirmLabel: "Mark absent" })) {
+                                        await updateShiftStatus(p, "absent");
+                                      }
+                                    }} disabled={statusBusy === p.shift_id} className="rounded-lg border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50">
+                                      Mark absent
+                                    </button>
+                                    <button onClick={() => setSickLeaveTarget(p)} disabled={statusBusy === p.shift_id} className="rounded-lg border border-purple-200 px-2 py-1 text-xs font-medium text-purple-700 hover:bg-purple-50 disabled:opacity-50">
+                                      Record sick leave
+                                    </button>
+                                  </>
+                                ) : p.status === "Not in" || p.status === "Stuck" ? (
+                                  <button onClick={() => setQuickClockIn(p)} className="rounded-lg bg-brand px-2 py-1 text-xs font-semibold text-white hover:bg-brand-dark">Clock in now</button>
+                                ) : null}
                               </div>
                             </td>
                           </tr>
@@ -362,6 +426,38 @@ export default function AttendancePage() {
           onSaved={() => { setQuickClockIn(null); load(); }}
         />
       )}
+      {sickLeaveTarget && (
+        <SickLeaveModal
+          pending={sickLeaveTarget}
+          busy={statusBusy === sickLeaveTarget.shift_id}
+          onClose={() => setSickLeaveTarget(null)}
+          onSave={(reason) => updateShiftStatus(sickLeaveTarget, "sick_leave", reason)}
+        />
+      )}
+    </div>
+  );
+}
+
+function SickLeaveModal({ pending, busy, onClose, onSave }: { pending: Pending; busy: boolean; onClose: () => void; onSave: (reason: string) => Promise<boolean> }) {
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-white p-5">
+        <h2 className="font-semibold">Record sick leave</h2>
+        <p className="mt-1 text-sm text-neutral-600">{pending.staff_name} · {dayLabel(pending.work_date)} · {pending.shift_start}–{pending.shift_end}</p>
+        <p className="mt-3 rounded-lg bg-purple-50 px-3 py-2 text-xs text-purple-800">This records approved sick leave for this date. It won&apos;t add worked hours.</p>
+        <label className="mt-3 block text-xs text-neutral-500">Note (optional)
+          <textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} rows={3} className="mt-1 w-full resize-y rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900" />
+        </label>
+        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+        <div className="mt-4 flex gap-2">
+          <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
+          <button onClick={async () => { setError(""); if (!(await onSave(reason))) setError("Couldn't record sick leave. Please try again."); }} disabled={busy} className="flex-1 rounded-xl bg-purple-700 py-2.5 text-sm font-semibold text-white hover:bg-purple-800 disabled:opacity-50">
+            {busy ? "Saving…" : "Confirm leave"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

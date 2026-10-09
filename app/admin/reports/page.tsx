@@ -22,7 +22,7 @@ type AttRow = {
   staff_id: number; staff_name: string; work_date: string;
   clock_in: string | null; clock_out: string | null; net_work_seconds: number; is_stuck: boolean;
 };
-type PendingRow = { staff_id: number; staff_name: string; status: ShiftStatus };
+type PendingRow = { staff_id: number; staff_name: string; status: ShiftStatus; state?: string };
 type TodayRow = { staff_id: number; staff_name: string; clockIn: string; clockOut: string; net: string; status: ShiftStatus };
 
 type HoursData = { columns: { key: string; header: string }[]; data: Record<string, string | number>[] };
@@ -58,7 +58,8 @@ export default function ReportsPage() {
       status: (r.is_stuck ? "Stuck" : r.clock_out ? "Done" : "On Shift") as ShiftStatus,
     }));
     const pending: TodayRow[] = (d.pending ?? []).map((p: PendingRow) => ({
-      staff_id: p.staff_id, staff_name: p.staff_name, clockIn: "—", clockOut: "—", net: "—", status: p.status,
+      staff_id: p.staff_id, staff_name: p.staff_name, clockIn: "—", clockOut: "—", net: "—",
+      status: p.state === "holiday" ? "Holiday" : p.state === "leave" ? "Leave" : p.state === "request_pending" ? "Leave requested" : p.state === "absent" ? "Absent" : p.status,
     }));
     setTodayRows([...real, ...pending].sort((a, b) => a.staff_name.localeCompare(b.staff_name)));
     setLoading(false);

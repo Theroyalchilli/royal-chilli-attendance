@@ -3,7 +3,7 @@
 // Reports "Today" tab, so the same person's status always reads the same
 // way everywhere instead of three slightly different labels.
 
-export type ShiftStatus = "On Shift" | "Done" | "Upcoming" | "Not in" | "Absent" | "Stuck";
+export type ShiftStatus = "On Shift" | "Done" | "Upcoming" | "Not in" | "Absent" | "Stuck" | "Leave" | "Holiday" | "Leave requested";
 
 /**
  * `nowHM`/`startHM`/`endHM` are "HH:MM" wall-clock strings in the workplace
@@ -40,6 +40,9 @@ export const SHIFT_STATUS_BADGE: Record<ShiftStatus, string> = {
   "Not in": "bg-amber-100 text-amber-700",
   Absent: "bg-red-100 text-red-700",
   Stuck: "bg-red-100 text-red-700",
+  Leave: "bg-purple-100 text-purple-700",
+  Holiday: "bg-purple-100 text-purple-700",
+  "Leave requested": "bg-purple-100 text-purple-700",
 };
 
 export const SHIFT_STATUS_LABEL: Record<ShiftStatus, string> = {
@@ -49,4 +52,7 @@ export const SHIFT_STATUS_LABEL: Record<ShiftStatus, string> = {
   "Not in": "Pending clock-in",
   Absent: "Absent",
   Stuck: "Forgotten clock-out",
+  Leave: "On leave",
+  Holiday: "Holiday",
+  "Leave requested": "Leave requested",
 };
