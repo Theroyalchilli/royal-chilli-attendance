@@ -117,6 +117,7 @@ export async function GET(req: NextRequest) {
   const urls = await signedPhotoUrls(photoPaths).catch(() => new Map<string, string>());
 
   return NextResponse.json({
+    canEditLockedTimes: g.session.role === "admin",
     rows: (rows ?? []).map((r) => ({
       ...r,
       in_photo_url: r.clock_in_photo ? urls.get(r.clock_in_photo) ?? null : null,
@@ -146,6 +147,33 @@ export async function POST(req: NextRequest) {
   const clockOut = body.clock_out ? new Date(body.clock_out).toISOString() : null;
   if (!staffId || !workDate || !clockIn) {
     return NextResponse.json({ error: "Staff, date and clock-in are required" }, { status: 400 });
+  }
+  if (clockOut && new Date(clockOut) <= new Date(clockIn)) {
+    return NextResponse.json({ error: "Clock-out must be after clock-in" }, { status: 400 });
+  }
+
+  // Prevent an accidental second POST when the manager meant to edit an
+  // existing session. Additional sessions must be an explicit UI choice.
+  const { data: existingRows, error: existingError } = await db
+    .from("attendance")
+    .select("id, clock_in, clock_out")
+    .eq("business_id", g.session.businessId)
+    .eq("staff_id", staffId)
+    .eq("work_date", workDate);
+  if (existingError) return NextResponse.json({ error: "Could not check existing attendance" }, { status: 500 });
+  if ((existingRows?.length ?? 0) > 0 && body.add_another_session !== true) {
+    return NextResponse.json({ error: "Attendance already exists for this day. Edit an existing session or choose Add another session." }, { status: 409 });
+  }
+  const startMs = new Date(clockIn).getTime();
+  const endMs = clockOut ? new Date(clockOut).getTime() : Number.POSITIVE_INFINITY;
+  const overlapsExisting = (existingRows ?? []).some((row) => {
+    if (!row.clock_in) return false;
+    const existingStart = new Date(row.clock_in).getTime();
+    const existingEnd = row.clock_out ? new Date(row.clock_out).getTime() : Number.POSITIVE_INFINITY;
+    return startMs < existingEnd && existingStart < endMs;
+  });
+  if (overlapsExisting && body.confirm_overlap !== true) {
+    return NextResponse.json({ error: "This session overlaps existing attendance. Confirm that the overlap is intentional." }, { status: 409 });
   }
 
   const settings = await getAttendanceSettings(g.session.businessId);

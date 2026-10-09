@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // The screen sends every field; only real differences count as a change.
   const timesChanged = keepOnlyRealTimeChanges(before, patch);
   if (timesChanged.length > 0) {
-    if (before.times_changed_at) return NextResponse.json({ error: LOCKED_MESSAGE, locked: true }, { status: 409 });
+    if (before.times_changed_at && g.session.role !== "admin") return NextResponse.json({ error: LOCKED_MESSAGE, locked: true }, { status: 409 });
     const clockIn = ("clock_in" in patch ? patch.clock_in : before.clock_in) as string | null;
     const clockOut = ("clock_out" in patch ? patch.clock_out : before.clock_out) as string | null;
     if (clockIn && clockOut && new Date(clockOut) <= new Date(clockIn)) {

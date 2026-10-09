@@ -116,6 +116,7 @@ export default function AttendancePage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [pending, setPending] = useState<Pending[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
+  const [canEditLockedTimes, setCanEditLockedTimes] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Row | null>(null);
   const [adding, setAdding] = useState(false);
@@ -153,6 +154,7 @@ export default function AttendancePage() {
     if (seq !== latestLoad.current) return; // a newer range/person was asked for meanwhile
     setRows(data.rows ?? []);
     setStaff(data.staff ?? []);
+    setCanEditLockedTimes(data.canEditLockedTimes === true);
     setPending(data.pending ?? []);
     setLoading(false);
   }, [from, to, staffId]);
@@ -416,12 +418,13 @@ export default function AttendancePage() {
         </div>
       )}
 
-      {editing && <EditModal row={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
-      {adding && <ManualEntryModal staff={staff} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />}
+      {editing && <EditModal row={editing} canEditLockedTimes={canEditLockedTimes} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
+      {adding && <ManualEntryModal staff={staff} onEditExisting={(row) => { setAdding(false); setEditing(row); }} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />}
       {quickClockIn && (
         <ManualEntryModal
           staff={staff}
-          prefill={{ staffId: String(quickClockIn.staff_id), clockIn: toLocalInput(new Date().toISOString()) }}
+          prefill={{ staffId: String(quickClockIn.staff_id), workDate: quickClockIn.work_date, clockIn: toLocalInput(new Date().toISOString()) }}
+          onEditExisting={(row) => { setQuickClockIn(null); setEditing(row); }}
           onClose={() => setQuickClockIn(null)}
           onSaved={() => { setQuickClockIn(null); load(); }}
         />
@@ -470,14 +473,15 @@ function toLocalInput(iso: string | null) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function EditModal({ row, onClose, onSaved }: { row: Row; onClose: () => void; onSaved: () => void }) {
+function EditModal({ row, canEditLockedTimes, onClose, onSaved }: { row: Row; canEditLockedTimes: boolean; onClose: () => void; onSaved: () => void }) {
   const [clockIn, setClockIn] = useState(toLocalInput(row.clock_in));
   const [clockOut, setClockOut] = useState(toLocalInput(row.clock_out));
   const [breakOverride, setBreakOverride] = useState(row.break_override_minutes == null ? "" : String(row.break_override_minutes));
   const [adjustMin, setAdjustMin] = useState(String(Math.round(row.adjustment_seconds / 60)));
   const [notes, setNotes] = useState(row.notes ?? "");
   // Times change once only; after that just the note, approval and photo check.
-  const locked = !!row.times_changed_at;
+  const alreadyChanged = !!row.times_changed_at;
+  const locked = alreadyChanged && !canEditLockedTimes;
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [photo, setPhoto] = useState<{ leg: "in" | "out"; url: string } | null>(null);
@@ -523,6 +527,12 @@ function EditModal({ row, onClose, onSaved }: { row: Row; onClose: () => void; o
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
             🔒 Times locked — already changed once on {new Date(row.times_changed_at!).toLocaleDateString("en-GB")}. They can&apos;t be changed again.
           </p>
+        ) : alreadyChanged && canEditLockedTimes ? (
+          <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">
+            Super admin override: you can update these times again. The change will be recorded in the attendance audit log.
+          </p>
+        ) : canEditLockedTimes ? (
+          <p className="mt-3 text-xs text-neutral-500">Super admin edits are recorded in the attendance audit log.</p>
         ) : (
           <p className="mt-3 text-xs text-neutral-500">Times can be changed once only. After you save a change they&apos;re locked.</p>
         )}
@@ -605,33 +615,85 @@ function EditModal({ row, onClose, onSaved }: { row: Row; onClose: () => void; o
             {busy ? "Saving…" : "Save"}
           </button>
         </div>
-        {!locked && <button onClick={del} disabled={busy} className="mt-2 w-full text-xs text-red-500 hover:underline">Delete this entry</button>}
+        {!alreadyChanged && <button onClick={del} disabled={busy} className="mt-2 w-full text-xs text-red-500 hover:underline">Delete this entry</button>}
       </div>
     </div>
   );
 }
 
-function ManualEntryModal({ staff, prefill, onClose, onSaved }: { staff: Staff[]; prefill?: { staffId: string; clockIn: string }; onClose: () => void; onSaved: () => void }) {
+function ManualEntryModal({ staff, prefill, onEditExisting, onClose, onSaved }: { staff: Staff[]; prefill?: { staffId: string; workDate?: string; clockIn: string }; onEditExisting: (row: Row) => void; onClose: () => void; onSaved: () => void }) {
   const [staffId, setStaffId] = useState(prefill?.staffId ?? "");
-  const [clockIn, setClockIn] = useState(prefill?.clockIn ?? "");
-  const [clockOut, setClockOut] = useState("");
+  const [workDate, setWorkDate] = useState(prefill?.workDate ?? prefill?.clockIn.slice(0, 10) ?? todayISO());
+  const [clockInTime, setClockInTime] = useState(prefill?.clockIn.slice(11, 16) ?? "");
+  const [clockOutTime, setClockOutTime] = useState("");
   const [notes, setNotes] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [existingRows, setExistingRows] = useState<Row[]>([]);
+  const [existingLoading, setExistingLoading] = useState(false);
+  const [existingLoadFailed, setExistingLoadFailed] = useState(false);
+  const [addingAnother, setAddingAnother] = useState(false);
+  const [overlapConfirmed, setOverlapConfirmed] = useState(false);
+
+  useEffect(() => {
+    setAddingAnother(false);
+    setOverlapConfirmed(false);
+    if (!staffId || !workDate) {
+      setExistingRows([]);
+      setExistingLoading(false);
+      setExistingLoadFailed(false);
+      return;
+    }
+    let cancelled = false;
+    setExistingRows([]);
+    setExistingLoadFailed(false);
+    setErr("");
+    setExistingLoading(true);
+    const params = new URLSearchParams({ from: workDate, to: workDate, staff_id: staffId });
+    fetch(`/api/admin/attendance?${params}`, { cache: "no-store" })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Could not check existing attendance");
+        if (!cancelled) setExistingRows(data.rows ?? []);
+      })
+      .catch((error) => { if (!cancelled) { setExistingLoadFailed(true); setErr(error.message || "Could not check existing attendance"); } })
+      .finally(() => { if (!cancelled) setExistingLoading(false); });
+    return () => { cancelled = true; };
+  }, [staffId, workDate]);
+
+  const proposedStart = workDate && clockInTime ? new Date(`${workDate}T${clockInTime}:00`) : null;
+  let proposedEnd = workDate && clockOutTime ? new Date(`${workDate}T${clockOutTime}:00`) : null;
+  if (proposedStart && proposedEnd && proposedEnd <= proposedStart) {
+    proposedEnd = new Date(proposedEnd.getTime() + 24 * 60 * 60 * 1000);
+  }
+  const overlappingRows = proposedStart ? existingRows.filter((row) => {
+    if (!row.clock_in) return false;
+    const existingStart = new Date(row.clock_in);
+    const existingEnd = row.clock_out ? new Date(row.clock_out) : null;
+    return (!proposedEnd || !existingEnd || proposedStart < existingEnd) && (!proposedEnd || existingStart < proposedEnd);
+  }) : [];
+  const showEntryForm = !existingRows.length || addingAnother;
 
   async function save() {
-    if (!staffId || !clockIn) return setErr("Pick a staff member and a clock-in time");
+    if (!staffId || !workDate || !clockInTime) return setErr("Pick a staff member, date and clock-in time");
+    if (existingLoadFailed) return setErr("Could not check for existing attendance. Please retry before adding a session.");
+    const inDate = new Date(`${workDate}T${clockInTime}:00`);
+    const outDate = clockOutTime ? new Date(`${workDate}T${clockOutTime}:00`) : null;
+    if (outDate && outDate <= inDate) outDate.setDate(outDate.getDate() + 1);
+    if (outDate && outDate <= inDate) return setErr("Clock-out must be after clock-in");
+    if (overlappingRows.length && !overlapConfirmed) return setErr("Confirm the overlap warning before saving this additional session");
     setBusy(true);
     setErr("");
-    const inDate = new Date(clockIn);
     const res = await fetch("/api/admin/attendance", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         staff_id: Number(staffId),
-        work_date: `${inDate.getFullYear()}-${String(inDate.getMonth() + 1).padStart(2, "0")}-${String(inDate.getDate()).padStart(2, "0")}`,
+        work_date: workDate,
         clock_in: inDate.toISOString(),
-        clock_out: clockOut ? new Date(clockOut).toISOString() : null,
+        clock_out: outDate?.toISOString() ?? null,
+        add_another_session: existingRows.length > 0,
+        confirm_overlap: overlapConfirmed,
         notes,
       }),
     });
@@ -644,20 +706,46 @@ function ManualEntryModal({ staff, prefill, onClose, onSaved }: { staff: Staff[]
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-5">
         <h2 className="font-semibold">Manual entry</h2>
-        <p className="mt-1 text-xs text-neutral-500">For a shift someone forgot to clock. Auto-approved.</p>
+        <p className="mt-1 text-xs text-neutral-500">Choose the staff member and work date first. If attendance is already recorded, edit a session or explicitly add another. New entries are auto-approved.</p>
         <select value={staffId} onChange={(e) => setStaffId(e.target.value)} className="mt-4 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
           <option value="">Staff member…</option>
           {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <label className="text-xs text-neutral-500">Clock in<input type="datetime-local" value={clockIn} onChange={(e) => setClockIn(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900" /></label>
-          <label className="text-xs text-neutral-500">Clock out<input type="datetime-local" value={clockOut} onChange={(e) => setClockOut(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm text-neutral-900" /></label>
-        </div>
-        <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Note (optional)" className="mt-3 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
+        <label className="mt-3 block text-xs text-neutral-500">Work date<input type="date" value={workDate} onChange={(e) => { setWorkDate(e.target.value); setClockInTime(""); setClockOutTime(""); setOverlapConfirmed(false); }} className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900" /></label>
+        {existingLoading && <p className="mt-3 text-xs text-neutral-500">Checking attendance for this day…</p>}
+        {!existingLoading && existingRows.length > 0 && (
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+            <p className="text-xs font-semibold text-amber-900">{existingRows.length} session{existingRows.length === 1 ? "" : "s"} already recorded for this day</p>
+            <div className="mt-2 space-y-2">
+              {existingRows.map((row) => (
+                <div key={row.id} className="flex items-center justify-between gap-3 rounded-lg bg-white p-2 text-xs">
+                  <span>{clockTime(row.clock_in)} – {row.clock_out ? clockTime(row.clock_out) : "open"}{row.times_changed_at ? " · locked" : ""}</span>
+                  <button type="button" onClick={() => onEditExisting(row)} className="shrink-0 font-semibold text-blue-700 hover:underline">Edit this session</button>
+                </div>
+              ))}
+            </div>
+            {!addingAnother && <button type="button" onClick={() => setAddingAnother(true)} className="mt-3 w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100">Add another session</button>}
+          </div>
+        )}
+        {showEntryForm && (
+          <>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <label className="text-xs text-neutral-500">Clock in<input type="time" value={clockInTime} onChange={(e) => { setClockInTime(e.target.value); setOverlapConfirmed(false); }} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-2 text-sm text-neutral-900" /></label>
+              <label className="text-xs text-neutral-500">Clock out<input type="time" value={clockOutTime} onChange={(e) => { setClockOutTime(e.target.value); setOverlapConfirmed(false); }} className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-2 text-sm text-neutral-900" /></label>
+            </div>
+            {overlappingRows.length > 0 && (
+              <label className="mt-3 flex gap-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">
+                <input type="checkbox" checked={overlapConfirmed} onChange={(e) => setOverlapConfirmed(e.target.checked)} />
+                <span>This session overlaps existing attendance. I confirm the overlap is intentional.</span>
+              </label>
+            )}
+            <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Note (optional)" className="mt-3 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
+          </>
+        )}
         {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
         <div className="mt-5 flex gap-3">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
-          <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">{busy ? "Saving…" : "Add"}</button>
+          {showEntryForm && <button onClick={save} disabled={busy || existingLoading || existingLoadFailed || !staffId || (overlappingRows.length > 0 && !overlapConfirmed)} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">{busy ? "Saving…" : existingRows.length ? "Add another session" : "Add entry"}</button>}
         </div>
       </div>
     </div>

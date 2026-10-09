@@ -151,6 +151,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const paidTotal = payroll.reduce((s, p) => s + p.paid_amount, 0);
 
   return NextResponse.json({
+    canEditLockedTimes: g.session.role === "admin",
     staff,
     range: { range, from, to },
     summary: {

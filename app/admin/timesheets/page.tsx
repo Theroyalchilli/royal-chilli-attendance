@@ -32,6 +32,20 @@ export default function TimesheetsPage() {
   const [list, setList] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [printMsg, setPrintMsg] = useState("");
+
+  // The week's hours on the till's 80mm printer (printed by the Print Station).
+  async function printHours() {
+    setPrintMsg("Sending…");
+    const res = await fetch("/api/admin/timesheets/print", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ period_start: weekStart, period_end: weekEnd }),
+    }).catch(() => null);
+    const data = await res?.json().catch(() => ({}));
+    setPrintMsg(res?.ok ? "✓ Sent to the till printer" : data?.error || "Couldn't send it to the printer");
+    setTimeout(() => setPrintMsg(""), 5000);
+  }
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/admin/timesheets?period_start=${weekStart}&period_end=${weekEnd}`, { cache: "no-store" });
@@ -75,7 +89,11 @@ export default function TimesheetsPage() {
         <button onClick={() => setWeekStart(addDays(weekStart, -7))} className="rounded-lg border border-neutral-300 px-2 py-1.5">←</button>
         <span className="font-medium">Week of {new Date(weekStart + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
         <button onClick={() => setWeekStart(addDays(weekStart, 7))} className="rounded-lg border border-neutral-300 px-2 py-1.5">→</button>
-        <button onClick={generate} disabled={busy} className="ml-auto rounded-lg bg-brand px-3 py-1.5 font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
+        {printMsg && <span className="ml-auto text-xs font-medium text-emerald-600">{printMsg}</span>}
+        <button onClick={printHours} className={`${printMsg ? "" : "ml-auto "}rounded-lg border border-neutral-300 px-3 py-1.5 font-semibold hover:bg-neutral-50`}>
+          🖨 Print hours
+        </button>
+        <button onClick={generate} disabled={busy} className="rounded-lg bg-brand px-3 py-1.5 font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
           {busy ? "…" : "Generate / refresh"}
         </button>
       </div>
