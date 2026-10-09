@@ -578,6 +578,16 @@ function ManualEntryModal({ staff, prefill, onEditExisting, onClose, onSaved }: 
   }) : [];
   const showEntryForm = !existingRows.length || addingAnother;
 
+  async function deleteExisting(row: Row) {
+    if (!(await confirmDelete(`${row.staff_name}'s ${row.work_date} attendance entry`))) return;
+    setBusy(true);
+    setErr("");
+    const res = await fetch(`/api/admin/attendance/${row.id}`, { method: "DELETE" });
+    setBusy(false);
+    if (!res.ok) return setErr((await res.json()).error || "Could not delete attendance");
+    onSaved();
+  }
+
   async function save() {
     if (!staffId || !workDate || !clockInTime) return setErr("Pick a staff member, date and clock-in time");
     if (existingLoadFailed) return setErr("Could not check for existing attendance. Please retry before adding a session.");
@@ -607,9 +617,12 @@ function ManualEntryModal({ staff, prefill, onEditExisting, onClose, onSaved }: 
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-5">
-        <h2 className="font-semibold">Manual entry</h2>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4">
+      <div className="mx-auto my-2 max-h-[calc(100dvh-1rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5">
+        <div className="sticky top-0 z-10 -mx-5 -mt-5 mb-2 flex items-center justify-between rounded-t-2xl bg-white px-5 pb-2 pt-5">
+          <h2 className="font-semibold">Manual entry</h2>
+          <button type="button" aria-label="Close manual entry" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg text-xl text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900">×</button>
+        </div>
         <p className="mt-1 text-xs text-neutral-500">Choose the staff member and work date first. If attendance is already recorded, edit a session or explicitly add another. New entries are auto-approved.</p>
         <select value={staffId} onChange={(e) => setStaffId(e.target.value)} className="mt-4 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
           <option value="">Staff member…</option>
@@ -624,7 +637,12 @@ function ManualEntryModal({ staff, prefill, onEditExisting, onClose, onSaved }: 
               {existingRows.map((row) => (
                 <div key={row.id} className="flex items-center justify-between gap-3 rounded-lg bg-white p-2 text-xs">
                   <span>{clockTime(row.clock_in)} – {row.clock_out ? clockTime(row.clock_out) : "open"}{row.times_changed_at ? " · locked" : ""}</span>
-                  <button type="button" onClick={() => onEditExisting(row)} className="shrink-0 font-semibold text-blue-700 hover:underline">Edit this session</button>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <button type="button" onClick={() => onEditExisting(row)} className="font-semibold text-blue-700 hover:underline">Edit</button>
+                    {!row.times_changed_at
+                      ? <button type="button" onClick={() => deleteExisting(row)} disabled={busy} className="font-semibold text-red-700 hover:underline disabled:opacity-50">Delete</button>
+                      : <span className="text-neutral-400" title="Times are locked; this row cannot be deleted">Delete locked</span>}
+                  </div>
                 </div>
               ))}
             </div>
@@ -647,9 +665,9 @@ function ManualEntryModal({ staff, prefill, onEditExisting, onClose, onSaved }: 
           </>
         )}
         {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
-        <div className="mt-5 flex gap-3">
-          <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
-          {showEntryForm && <button onClick={save} disabled={busy || existingLoading || existingLoadFailed || !staffId || (overlappingRows.length > 0 && !overlapConfirmed)} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">{busy ? "Saving…" : existingRows.length ? "Add another session" : "Add entry"}</button>}
+        <div className="sticky bottom-0 -mx-5 -mb-5 mt-5 flex gap-3 border-t border-neutral-100 bg-white p-5">
+          <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Close</button>
+          {showEntryForm && <button onClick={save} disabled={busy || existingLoading || existingLoadFailed || !staffId || (overlappingRows.length > 0 && !overlapConfirmed)} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">{busy ? "Saving…" : existingRows.length ? "Save additional session" : "Save entry"}</button>}
         </div>
       </div>
     </div>
