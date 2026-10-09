@@ -525,7 +525,7 @@ function AttendanceEditModal({ row, canEditLockedTimes, onClose, onSaved }: { ro
             {busy ? "Saving…" : "Save"}
           </button>
         </div>
-        {!alreadyChanged && <button onClick={del} disabled={busy} className="mt-2 w-full text-xs text-red-500 hover:underline">Delete this entry</button>}
+        {(!alreadyChanged || canEditLockedTimes) && <button onClick={del} disabled={busy} className="mt-2 w-full text-xs text-red-500 hover:underline">Delete this entry</button>}
       </div>
     </div>
   );

@@ -19,10 +19,9 @@ export const isOwnPagesOnly = (role: string) => role === "employee" || role === 
 /** Manager level: Super admin, Manager — Managers keep everything here. */
 export const isManagerLevel = (role: string) => role === "admin" || role === "manager";
 
-/** Hands-on manager (food safety edits, training records): Manager. */
-export const isHandsOnManager = (role: string) => role === "manager";
+/** Super admins and managers can record food safety and training updates. */
+export const isHandsOnManager = (role: string) => role === "admin" || role === "manager";
 
-/** Roles that never appear on the rota (agreed 2026-10-03): Super admin and
- *  HR. Manager, Front House and Kitchen do. */
-export const NOT_ON_ROTA = ["admin", "hr"] as const;
+/** HR is not scheduled as operational staff. Super admins retain full rota access. */
+export const NOT_ON_ROTA = ["hr"] as const;
 export const isOnRota = (role: string) => !(NOT_ON_ROTA as readonly string[]).includes(role);

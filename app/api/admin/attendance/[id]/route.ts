@@ -71,7 +71,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const id = Number((await params).id);
   const { data: before } = await db.from("attendance").select("*").eq("id", id).maybeSingle();
   if (!before) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (before.times_changed_at) return NextResponse.json({ error: LOCKED_MESSAGE, locked: true }, { status: 409 });
+  if (before.times_changed_at && g.session.role !== "admin") return NextResponse.json({ error: LOCKED_MESSAGE, locked: true }, { status: 409 });
   const { error } = await db.from("attendance").delete().eq("id", id);
   if (error) return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   await audit(g.session.id, "attendance_delete", id, before, null);

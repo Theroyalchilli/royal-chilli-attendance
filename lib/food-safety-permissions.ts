@@ -41,8 +41,8 @@ export function canEditTrace(role: StaffRole): boolean {
 }
 
 // Team/training — everyone with any access sees the whole team's status;
-// only a manager can record a new completion. Employees don't use this at
-// all (they only ever see their own record, via /me/food-safety/training).
+// super admins and managers can record a new completion. Employees don't use
+// this at all (they only ever see their own record, via /me/food-safety/training).
 export function canViewTeamTraining(role: StaffRole): boolean {
   return isManagerLevel(role);
 }
