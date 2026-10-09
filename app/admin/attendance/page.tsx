@@ -105,6 +105,7 @@ export default function AttendancePage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [pending, setPending] = useState<Pending[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
+  const [canEditLockedTimes, setCanEditLockedTimes] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Row | null>(null);
   const [adding, setAdding] = useState(false);
@@ -139,6 +140,7 @@ export default function AttendancePage() {
     if (seq !== latestLoad.current) return; // a newer range/person was asked for meanwhile
     setRows(data.rows ?? []);
     setStaff(data.staff ?? []);
+    setCanEditLockedTimes(data.canEditLockedTimes === true);
     setPending(data.pending ?? []);
     setLoading(false);
   }, [from, to, staffId]);
@@ -352,7 +354,7 @@ export default function AttendancePage() {
         </div>
       )}
 
-      {editing && <EditModal row={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
+      {editing && <EditModal row={editing} canEditLockedTimes={canEditLockedTimes} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
       {adding && <ManualEntryModal staff={staff} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />}
       {quickClockIn && (
         <ManualEntryModal
@@ -374,14 +376,15 @@ function toLocalInput(iso: string | null) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function EditModal({ row, onClose, onSaved }: { row: Row; onClose: () => void; onSaved: () => void }) {
+function EditModal({ row, canEditLockedTimes, onClose, onSaved }: { row: Row; canEditLockedTimes: boolean; onClose: () => void; onSaved: () => void }) {
   const [clockIn, setClockIn] = useState(toLocalInput(row.clock_in));
   const [clockOut, setClockOut] = useState(toLocalInput(row.clock_out));
   const [breakOverride, setBreakOverride] = useState(row.break_override_minutes == null ? "" : String(row.break_override_minutes));
   const [adjustMin, setAdjustMin] = useState(String(Math.round(row.adjustment_seconds / 60)));
   const [notes, setNotes] = useState(row.notes ?? "");
   // Times change once only; after that just the note, approval and photo check.
-  const locked = !!row.times_changed_at;
+  const alreadyChanged = !!row.times_changed_at;
+  const locked = alreadyChanged && !canEditLockedTimes;
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [photo, setPhoto] = useState<{ leg: "in" | "out"; url: string } | null>(null);
@@ -427,6 +430,12 @@ function EditModal({ row, onClose, onSaved }: { row: Row; onClose: () => void; o
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
             🔒 Times locked — already changed once on {new Date(row.times_changed_at!).toLocaleDateString("en-GB")}. They can&apos;t be changed again.
           </p>
+        ) : alreadyChanged && canEditLockedTimes ? (
+          <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">
+            Super admin override: you can update these times again. The change will be recorded in the attendance audit log.
+          </p>
+        ) : canEditLockedTimes ? (
+          <p className="mt-3 text-xs text-neutral-500">Super admin edits are recorded in the attendance audit log.</p>
         ) : (
           <p className="mt-3 text-xs text-neutral-500">Times can be changed once only. After you save a change they&apos;re locked.</p>
         )}

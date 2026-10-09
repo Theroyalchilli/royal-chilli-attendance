@@ -63,6 +63,7 @@ type PayrollEntry = {
   payments: Payment[];
 };
 type Profile = {
+  canEditLockedTimes: boolean;
   staff: Staff;
   range: { range: string; from: string; to: string };
   summary: { hours_seconds: number; days_worked: number; scheduled_days: number; late_count: number; absences: number; gross_pay: number; outstanding_pay: number };
@@ -394,7 +395,7 @@ export default function EmployeeProfilePage() {
         )}
       </section>
 
-      {editingRow && <AttendanceEditModal row={editingRow} onClose={() => setEditingRow(null)} onSaved={() => { setEditingRow(null); load(); }} />}
+      {editingRow && <AttendanceEditModal row={editingRow} canEditLockedTimes={data?.canEditLockedTimes === true} onClose={() => setEditingRow(null)} onSaved={() => { setEditingRow(null); load(); }} />}
       {editingRota && <UsualRotaModal staff={staff} onClose={() => setEditingRota(false)} onSaved={() => { setEditingRota(false); load(); }} />}
       {adding && <ManualEntryModal staffId={Number(staffId)} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />}
     </div>
@@ -409,14 +410,15 @@ function toLocalInput(iso: string | null) {
   return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}`;
 }
 
-function AttendanceEditModal({ row, onClose, onSaved }: { row: Row; onClose: () => void; onSaved: () => void }) {
+function AttendanceEditModal({ row, canEditLockedTimes, onClose, onSaved }: { row: Row; canEditLockedTimes: boolean; onClose: () => void; onSaved: () => void }) {
   const [clockIn, setClockIn] = useState(toLocalInput(row.clock_in));
   const [clockOut, setClockOut] = useState(toLocalInput(row.clock_out));
   const [breakOverride, setBreakOverride] = useState(row.break_override_minutes == null ? "" : String(row.break_override_minutes));
   const [adjustMin, setAdjustMin] = useState(String(Math.round(row.adjustment_seconds / 60)));
   const [notes, setNotes] = useState(row.notes ?? "");
   // Times change once only; after that just the note, approval and photo check.
-  const locked = !!row.times_changed_at;
+  const alreadyChanged = !!row.times_changed_at;
+  const locked = alreadyChanged && !canEditLockedTimes;
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [photo, setPhoto] = useState<{ leg: "in" | "out"; url: string } | null>(null);
@@ -462,6 +464,12 @@ function AttendanceEditModal({ row, onClose, onSaved }: { row: Row; onClose: () 
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
             🔒 Times locked — already changed once on {new Date(row.times_changed_at!).toLocaleDateString("en-GB")}. They can&apos;t be changed again.
           </p>
+        ) : alreadyChanged && canEditLockedTimes ? (
+          <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">
+            Super admin override: you can update these times again. The change will be recorded in the attendance audit log.
+          </p>
+        ) : canEditLockedTimes ? (
+          <p className="mt-3 text-xs text-neutral-500">Super admin edits are recorded in the attendance audit log.</p>
         ) : (
           <p className="mt-3 text-xs text-neutral-500">Times can be changed once only. After you save a change they&apos;re locked.</p>
         )}

@@ -99,6 +99,7 @@ export async function GET(req: NextRequest) {
   const urls = await signedPhotoUrls(photoPaths).catch(() => new Map<string, string>());
 
   return NextResponse.json({
+    canEditLockedTimes: g.session.role === "admin",
     rows: (rows ?? []).map((r) => ({
       ...r,
       in_photo_url: r.clock_in_photo ? urls.get(r.clock_in_photo) ?? null : null,
