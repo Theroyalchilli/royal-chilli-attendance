@@ -419,10 +419,11 @@ export default function AttendancePage() {
       )}
 
       {editing && <EditModal row={editing} canEditLockedTimes={canEditLockedTimes} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
-      {adding && <ManualEntryModal staff={staff} onEditExisting={(row) => { setAdding(false); setEditing(row); }} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />}
+      {adding && <ManualEntryModal staff={staff} canEditLockedTimes={canEditLockedTimes} onEditExisting={(row) => { setAdding(false); setEditing(row); }} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); load(); }} />}
       {quickClockIn && (
         <ManualEntryModal
           staff={staff}
+          canEditLockedTimes={canEditLockedTimes}
           prefill={{ staffId: String(quickClockIn.staff_id), workDate: quickClockIn.work_date, clockIn: toLocalInput(new Date().toISOString()) }}
           onEditExisting={(row) => { setQuickClockIn(null); setEditing(row); }}
           onClose={() => setQuickClockIn(null)}
@@ -621,14 +622,14 @@ function EditModal({ row, canEditLockedTimes, onClose, onSaved }: { row: Row; ca
             {busy ? "Saving…" : "Save"}
           </button>
         </div>
-        {!alreadyChanged && <button onClick={del} disabled={busy} className="mt-2 w-full text-xs text-red-500 hover:underline">Delete this entry</button>}
+        {(!alreadyChanged || canEditLockedTimes) && <button onClick={del} disabled={busy} className="mt-2 w-full text-xs text-red-500 hover:underline">Delete this entry</button>}
         </div>
       </div>
     </div>
   );
 }
 
-function ManualEntryModal({ staff, prefill, onEditExisting, onClose, onSaved }: { staff: Staff[]; prefill?: { staffId: string; workDate?: string; clockIn: string }; onEditExisting: (row: Row) => void; onClose: () => void; onSaved: () => void }) {
+function ManualEntryModal({ staff, canEditLockedTimes, prefill, onEditExisting, onClose, onSaved }: { staff: Staff[]; canEditLockedTimes: boolean; prefill?: { staffId: string; workDate?: string; clockIn: string }; onEditExisting: (row: Row) => void; onClose: () => void; onSaved: () => void }) {
   const [staffId, setStaffId] = useState(prefill?.staffId ?? "");
   const [workDate, setWorkDate] = useState(prefill?.workDate ?? prefill?.clockIn.slice(0, 10) ?? todayISO());
   const [clockInTime, setClockInTime] = useState(prefill?.clockIn.slice(11, 16) ?? "");
@@ -743,9 +744,9 @@ function ManualEntryModal({ staff, prefill, onEditExisting, onClose, onSaved }: 
                   <span>{clockTime(row.clock_in)} – {row.clock_out ? clockTime(row.clock_out) : "open"}{row.times_changed_at ? " · locked" : ""}</span>
                   <div className="flex shrink-0 items-center gap-3">
                     <button type="button" onClick={() => onEditExisting(row)} className="font-semibold text-blue-700 hover:underline">Edit</button>
-                    {!row.times_changed_at
+                    {!row.times_changed_at || canEditLockedTimes
                       ? <button type="button" onClick={() => deleteExisting(row)} disabled={busy} className="font-semibold text-red-700 hover:underline disabled:opacity-50">Delete</button>
-                      : <span className="text-neutral-400" title="Times are locked; this row cannot be deleted">Delete locked</span>}
+                      : <span className="text-neutral-400" title="Only a super admin can delete a locked session">Delete locked</span>}
                   </div>
                 </div>
               ))}

@@ -67,8 +67,8 @@ export function navFor(role: StaffRole): NavGroup[] {
   ];
 
   // Food safety is deliberately excluded from HR entirely (HANDOVER.md §2) —
-  // it's a kitchen operation, not a people one. Trace/Team Training stay
-  // manager-edit, admin-view only (enforced on the pages).
+  // it's a kitchen operation, not a people one. Super admins and managers can
+  // both edit trace records and record team training.
   if (role !== "hr") {
     groups.push({
       label: "Food Safety",
