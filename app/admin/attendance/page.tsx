@@ -423,9 +423,13 @@ function EditModal({ row, canEditLockedTimes, onClose, onSaved }: { row: Row; ca
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-5">
-        <h2 className="font-semibold">{row.staff_name}<span className="ml-2 text-sm font-normal text-neutral-400">{dayLabel(row.work_date)}</span></h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/40 p-3 sm:p-4">
+      <div role="dialog" aria-modal="true" aria-labelledby="attendance-edit-title" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-xl sm:max-h-[calc(100dvh-2rem)]">
+        <div className="flex shrink-0 items-center justify-between border-b border-neutral-100 px-5 py-4">
+          <h2 id="attendance-edit-title" className="font-semibold">{row.staff_name}<span className="ml-2 text-sm font-normal text-neutral-400">{dayLabel(row.work_date)}</span></h2>
+          <button type="button" aria-label="Close attendance edit" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg text-xl text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900">×</button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 touch-pan-y" style={{ WebkitOverflowScrolling: "touch" }}>
 
         {locked ? (
           <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -506,8 +510,10 @@ function EditModal({ row, canEditLockedTimes, onClose, onSaved }: { row: Row; ca
         )}
 
         {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
+        </div>
 
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="shrink-0 border-t border-neutral-100 bg-white px-5 py-4">
+        <div className="flex flex-wrap gap-2">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
           {row.clock_in && !row.clock_out && (
             <button onClick={() => { setClockOut(toLocalInput(new Date().toISOString())); }} className="rounded-xl border border-neutral-300 px-3 py-2.5 text-sm">Set out = now</button>
@@ -520,6 +526,7 @@ function EditModal({ row, canEditLockedTimes, onClose, onSaved }: { row: Row; ca
           </button>
         </div>
         {!alreadyChanged && <button onClick={del} disabled={busy} className="mt-2 w-full text-xs text-red-500 hover:underline">Delete this entry</button>}
+        </div>
       </div>
     </div>
   );
@@ -624,7 +631,7 @@ function ManualEntryModal({ staff, prefill, onEditExisting, onClose, onSaved }: 
           <button type="button" aria-label="Close manual entry" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg text-xl text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900">×</button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 touch-pan-y" style={{ WebkitOverflowScrolling: "touch" }}>
-        <p className="text-xs text-neutral-500">Choose the staff member and work date first. If attendance is already recorded, edit a session or explicitly add another. New entries are auto-approved.</p>
+        <p className="mb-1 text-xs leading-5 text-neutral-600">Choose the staff member and work date first. If attendance is already recorded, edit a session or explicitly add another. New entries are auto-approved.</p>
         <select value={staffId} onChange={(e) => setStaffId(e.target.value)} className="mt-4 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm">
           <option value="">Staff member…</option>
           {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
