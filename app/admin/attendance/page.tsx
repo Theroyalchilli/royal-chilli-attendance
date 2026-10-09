@@ -355,7 +355,7 @@ export default function AttendancePage() {
                             <td className="px-3 py-2">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${p.state === "leave" || p.state === "holiday" || p.state === "request_pending" ? "bg-purple-100 text-purple-700" : p.state === "absent" || p.status === "Absent" ? SHIFT_STATUS_BADGE.Absent : SHIFT_STATUS_BADGE[p.status]}`}>
-                                  {p.state === "holiday" ? "Holiday" : p.state === "leave" ? `Leave · ${p.leave_type === "sick" ? "Sick" : p.leave_type === "unpaid" ? "Unpaid" : "Other"}` : p.state === "request_pending" ? `Leave requested · ${p.leave_type ?? "Review"}` : p.state === "absent" ? "Recorded absent" : SHIFT_STATUS_LABEL[p.status]}
+                                  {p.state === "holiday" ? "Holiday" : p.state === "leave" ? p.leave_type === "sick" ? "Sick" : p.leave_type === "unpaid" ? "Unpaid leave" : "Leave" : p.state === "request_pending" ? `Leave requested · ${p.leave_type ?? "Review"}` : p.state === "absent" ? "Absent" : SHIFT_STATUS_LABEL[p.status]}
                                 </span>
                                 {p.state === "absent" ? (
                                   <button onClick={async () => {

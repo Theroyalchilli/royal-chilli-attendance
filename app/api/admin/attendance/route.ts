@@ -84,6 +84,7 @@ export async function GET(req: NextRequest) {
         : leave?.status === "pending" ? "request_pending" : s.status === "missed" ? "absent" : "pending";
       const scheduledEnd = resolveScheduled(s.shift_date, start, end, settings.timezone).end;
       return {
+        shift_id: s.id,
         staff_id: s.staff_id,
         staff_name: nameById.get(s.staff_id) ?? "?",
         work_date: s.shift_date,
