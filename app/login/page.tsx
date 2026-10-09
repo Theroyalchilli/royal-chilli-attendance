@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isOwnPagesOnly } from "@/lib/roles";
+import { freshStart } from "@/lib/auth-sync";
 
 const dest = (role: string) => (isOwnPagesOnly(role) ? "/me" : "/admin");
 
@@ -47,7 +48,7 @@ export default function LoginPage() {
         setError(data.error || "Login failed");
         return;
       }
-      router.replace(dest(data.user.role));
+      freshStart(dest(data.user.role));
     } finally {
       setBusy(false);
     }

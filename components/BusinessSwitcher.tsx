@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { freshStart } from "@/lib/auth-sync";
 
 export type SwitcherOption = { id: number; name: string; active: boolean };
 
 // The group owner's "Working in" picker — switching gives a fresh login for
 // that business and reloads Attendance inside it (mirrors the Staff Hub's).
 export default function BusinessSwitcher({ current, options, className = "" }: { current: number; options: SwitcherOption[]; className?: string }) {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -24,8 +23,7 @@ export default function BusinessSwitcher({ current, options, className = "" }: {
       setError((await res.json().catch(() => ({}))).error || "Couldn't switch");
       return;
     }
-    router.push("/admin");
-    router.refresh();
+    freshStart("/admin");
   }
 
   return (

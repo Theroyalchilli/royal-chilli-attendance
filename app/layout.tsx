@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { ConfirmHost } from "@/components/ui/confirm";
+import AuthSync from "@/components/AuthSync";
 import { headers } from "next/headers";
 import { businessForHost } from "@/lib/business";
 import { appUrl } from "@/lib/app-hosts";
@@ -58,7 +59,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={playfair.variable}>
-      <body className="min-h-full bg-cream text-ink antialiased">{children}<ConfirmHost /></body>
+      <body className="min-h-full bg-cream text-ink antialiased">{children}<ConfirmHost /><AuthSync /></body>
     </html>
   );
 }
