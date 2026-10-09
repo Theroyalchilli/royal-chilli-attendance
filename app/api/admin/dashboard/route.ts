@@ -55,10 +55,10 @@ export async function GET(req: NextRequest) {
     fsTrainingRecords,
   ] = await Promise.all([
     db.from("staff").select("id, name, role").eq("active", 1).in("id", await staffIdsAt(g.session.businessId)),
-    db.from("shifts").select("id, staff_id, start_time, end_time, position").eq("shift_date", today).neq("status", "cancelled"),
+    db.from("shifts").select("id, staff_id, start_time, end_time, position, status").eq("shift_date", today).neq("status", "cancelled"),
     db.from("attendance").select("staff_id, shift_id, clock_in, clock_out, late_seconds").eq("work_date", today),
     db.from("attendance").select("id, staff_id, clock_in").is("clock_out", null).not("clock_in", "is", null),
-    db.from("leave_requests").select("staff_id").eq("status", "approved").lte("start_date", today).gte("end_date", today),
+    db.from("leave_requests").select("staff_id, leave_type").eq("status", "approved").lte("start_date", today).gte("end_date", today),
     db
       .from("attendance_corrections")
       .select("id, staff_id, original_snapshot, requested_change, status, created_at")
@@ -99,19 +99,28 @@ export async function GET(req: NextRequest) {
     (attToday ?? []).filter((r) =>
       r.staff_id === s.staff_id && (r.shift_id === s.id || (shiftCount.get(s.staff_id) === 1 && r.shift_id == null)),
     );
+  const leaveTypeByStaff = new Map((leaveNow ?? []).map((r) => [r.staff_id, r.leave_type]));
   const todaysShifts = (shiftsToday ?? [])
-    .map((s) => ({
-      staff_name: nameById.get(s.staff_id) ?? "?",
-      role: s.position || roleById.get(s.staff_id) || "",
-      start: s.start_time.slice(0, 5),
-      end: s.end_time.slice(0, 5),
-      status: classifyShiftStatus({
+    .map((s) => {
+      const classified = classifyShiftStatus({
         workDate: today, today, startHM: s.start_time.slice(0, 5), nowHM,
         hasOpenShift: openSet.has(s.staff_id) && rowsFor(s).some((r) => r.clock_in && !r.clock_out),
         hasClosedShift: rowsFor(s).some((r) => r.clock_out),
         hasStaleOpenShift: staleOpenSet.has(s.staff_id),
-      }),
-    }))
+      });
+      const status = classified === "On Shift" || classified === "Done" || classified === "Stuck"
+        ? classified
+        : leaveTypeByStaff.has(s.staff_id)
+          ? leaveTypeByStaff.get(s.staff_id) === "holiday" ? "Holiday" : "Leave"
+          : s.status === "missed" ? "Absent" : classified;
+      return {
+        staff_name: nameById.get(s.staff_id) ?? "?",
+        role: s.position || roleById.get(s.staff_id) || "",
+        start: s.start_time.slice(0, 5),
+        end: s.end_time.slice(0, 5),
+        status,
+      };
+    })
     .sort((a, b) => a.start.localeCompare(b.start));
 
   // --- attendance breakdown (present on-time / late / on leave / absent) ---
@@ -122,7 +131,7 @@ export async function GET(req: NextRequest) {
   // tile's total is scheduled ∪ present ∪ on-leave, so someone who works an
   // unscheduled shift still shows up as Present rather than being hidden.
   const scheduled = new Set((shiftsToday ?? []).map((r) => r.staff_id));
-  const onLeave = new Set((leaveNow ?? []).map((r) => r.staff_id));
+  const onLeave = new Set(leaveTypeByStaff.keys());
   const present = new Set((attToday ?? []).filter((r) => r.clock_in).map((r) => r.staff_id));
   const late = new Set((attToday ?? []).filter((r) => r.clock_in && (r.late_seconds ?? 0) > 0).map((r) => r.staff_id));
   const lateCount = late.size;

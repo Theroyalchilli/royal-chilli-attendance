@@ -7,6 +7,7 @@ import { getAttendanceSettings, localDateString } from "@/lib/settings";
 import { loadStaffRota, resolveScheduleFor } from "@/lib/rota";
 import { recompute, audit } from "@/lib/attendance-write";
 import { classifyShiftStatus } from "@/lib/shift-status";
+import { resolveScheduled } from "@/lib/time-engine";
 
 export const dynamic = "force-dynamic";
 
@@ -26,21 +27,25 @@ export async function GET(req: NextRequest) {
   if (to) q = q.lte("work_date", to);
   if (staffId) q = q.eq("staff_id", Number(staffId));
 
-  let shiftsQ = db.from("shifts").select("id, staff_id, shift_date, start_time, end_time").neq("status", "cancelled");
+  let shiftsQ = db.from("shifts").select("id, staff_id, shift_date, start_time, end_time, status").neq("status", "cancelled");
   if (from) shiftsQ = shiftsQ.gte("shift_date", from);
   if (to) shiftsQ = shiftsQ.lte("shift_date", to);
   if (staffId) shiftsQ = shiftsQ.eq("staff_id", Number(staffId));
+  let leaveQ = db.from("leave_requests").select("staff_id, start_date, end_date, leave_type, status");
+  if (from && to) leaveQ = leaveQ.lte("start_date", to).gte("end_date", from);
+  if (staffId) leaveQ = leaveQ.eq("staff_id", Number(staffId));
 
-  const [{ data: rows, error }, { data: staff }, { data: shifts }, settings, { data: openRows }] = await Promise.all([
+  const [{ data: rows, error }, { data: staff }, { data: shifts }, { data: leaveRows, error: leaveError }, settings, { data: openRows }] = await Promise.all([
     q,
     db.from("staff").select("id, name").eq("active", 1).in("id", await staffIdsAt(g.session.businessId)).order("name"),
     shiftsQ,
+    leaveQ,
     getAttendanceSettings(g.session.businessId),
     // Every currently-open shift, any date — used to catch a forgotten
     // clock-out from a day outside whatever range is being viewed right now.
     db.from("attendance").select("staff_id, clock_in").is("clock_out", null).not("clock_in", "is", null),
   ]);
-  if (error) return NextResponse.json({ error: "Failed to load" }, { status: 500 });
+  if (error || leaveError) return NextResponse.json({ error: "Failed to load" }, { status: 500 });
 
   const nameById = new Map((staff ?? []).map((s) => [s.id, s.name]));
   const today = localDateString(new Date(), settings.timezone);
@@ -48,10 +53,8 @@ export async function GET(req: NextRequest) {
   const staleBefore = new Date(Date.now() - settings.missingClockoutHours * 3600_000).toISOString();
   const staleOpenSet = new Set((openRows ?? []).filter((r) => r.clock_in < staleBefore).map((r) => r.staff_id));
 
-  // A shift with no matching attendance row at all — someone rota'd who
-  // hasn't clocked in (today) or never showed (a past day). Never future
-  // dates: nothing to check yet. Surfaced separately from `rows` since these
-  // have no attendance id to edit — the UI offers "Clock in now" instead.
+  // A shift with no matching attendance row at all. Include approved leave
+  // even when the shift is in the future so its status is visible in this view.
   // Staff with a stale open shift from another day show "Stuck" here even
   // though today's own shift has nothing recorded — that's the real story.
   // Split shifts: a shift counts as attended by a row linked to it
@@ -68,20 +71,34 @@ export async function GET(req: NextRequest) {
     const k = `${s.staff_id}-${s.shift_date}`;
     return attendedShift.has(s.id) || (shiftsPerDay.get(k) === 1 && attendedKey.has(k));
   };
+  const now = new Date();
   const pending = (shifts ?? [])
-    .filter((s) => s.shift_date <= today && !attended(s))
-    .map((s) => ({
-      staff_id: s.staff_id,
-      staff_name: nameById.get(s.staff_id) ?? "?",
-      work_date: s.shift_date,
-      shift_start: s.start_time.slice(0, 5),
-      shift_end: s.end_time.slice(0, 5),
-      status: classifyShiftStatus({
-        workDate: s.shift_date, today, startHM: s.start_time.slice(0, 5), nowHM,
-        hasOpenShift: false, hasClosedShift: false, hasStaleOpenShift: staleOpenSet.has(s.staff_id),
-      }),
-    }))
-    .filter((p) => p.status !== "Upcoming"); // today, not due to start yet — nothing to flag
+    .filter((s) => !attended(s))
+    .map((s) => {
+      const start = s.start_time.slice(0, 5);
+      const end = s.end_time.slice(0, 5);
+      const matchingLeave = (leaveRows ?? []).filter((l) => l.staff_id === s.staff_id && s.shift_date >= l.start_date && s.shift_date <= l.end_date);
+      const leave = matchingLeave.find((l) => l.status === "approved") ?? matchingLeave.find((l) => l.status === "pending");
+      const state = leave?.status === "approved"
+        ? (leave.leave_type === "holiday" ? "holiday" : "leave")
+        : leave?.status === "pending" ? "request_pending" : s.status === "missed" ? "absent" : "pending";
+      const scheduledEnd = resolveScheduled(s.shift_date, start, end, settings.timezone).end;
+      return {
+        staff_id: s.staff_id,
+        staff_name: nameById.get(s.staff_id) ?? "?",
+        work_date: s.shift_date,
+        shift_start: start,
+        shift_end: end,
+        status: classifyShiftStatus({
+          workDate: s.shift_date, today, startHM: start, nowHM,
+          hasOpenShift: false, hasClosedShift: false, hasStaleOpenShift: staleOpenSet.has(s.staff_id),
+        }),
+        state,
+        leave_type: leave?.leave_type ?? null,
+        canMarkAbsent: state === "pending" && !staleOpenSet.has(s.staff_id) && scheduledEnd <= now,
+      };
+    })
+    .filter((p) => p.state !== "pending" || p.status !== "Upcoming");
 
   // The shift(s) currently on the rota for each person/day — shown in the
   // Rota column. Live rota, not the schedule snapshotted at clock-in, so it
