@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bizDb } from "@/lib/business-db";
+import supabase from "@/lib/supabase";
 import { requireManager } from "@/lib/guard";
 import { recomputeAndSave } from "@/lib/recompute-row";
 import { audit } from "@/lib/attendance-write";
@@ -72,8 +73,25 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { data: before } = await db.from("attendance").select("*").eq("id", id).maybeSingle();
   if (!before) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (before.times_changed_at && g.session.role !== "admin") return NextResponse.json({ error: LOCKED_MESSAGE, locked: true }, { status: 409 });
-  const { error } = await db.from("attendance").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: "Delete failed" }, { status: 500 });
+  if (before.times_changed_at) {
+    // The database trigger blocks direct deletes of locked rows. Use the RPC
+    // that checks this active admin and sets transaction-local trigger context.
+    const { data, error } = await supabase.rpc("delete_locked_attendance_as_admin", {
+      p_attendance_id: id,
+      p_business_id: g.session.businessId,
+      p_admin_id: g.session.id,
+    });
+    if (error || data !== true) {
+      if (error) console.error("locked attendance delete failed:", error);
+      return NextResponse.json({ error: "Delete failed" }, { status: 500 });
+    }
+  } else {
+    const { error } = await db.from("attendance").delete().eq("id", id);
+    if (error) {
+      console.error("attendance delete failed:", error);
+      return NextResponse.json({ error: "Delete failed" }, { status: 500 });
+    }
+  }
   await audit(g.session.id, "attendance_delete", id, before, null);
   return NextResponse.json({ success: true });
 }
