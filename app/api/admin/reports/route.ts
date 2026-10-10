@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
       { key: "regular", header: "Regular h" },
       { key: "overtime", header: "Overtime h" },
       { key: "break", header: "Break h" },
-      { key: "net", header: "Net h" },
+      { key: "net", header: "Net h (decimal)" },
     ];
     data = (rows ?? []).map((r) => ({
       employee: nameById.get(r.staff_id) ?? "?",
@@ -80,6 +80,8 @@ export async function GET(req: NextRequest) {
       overtime: decimalHours(r.overtime_seconds),
       break: decimalHours(r.break_seconds),
       net: decimalHours(r.net_work_seconds),
+      // Not a CSV column: lets the page add up exact minutes.
+      net_seconds: r.net_work_seconds ?? 0,
     }));
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { clockTime, hm } from "@/lib/format";
+import { clockTime, decimalHours, hm } from "@/lib/format";
 import { SHIFT_STATUS_BADGE, SHIFT_STATUS_LABEL, type ShiftStatus } from "@/lib/shift-status";
 
 function todayISO() {
@@ -26,7 +26,9 @@ type PendingRow = { staff_id: number; staff_name: string; status: ShiftStatus; s
 type TodayRow = { staff_id: number; staff_name: string; clockIn: string; clockOut: string; net: string; status: ShiftStatus };
 
 type HoursData = { columns: { key: string; header: string }[]; data: Record<string, string | number>[] };
-type RangeRow = { staff_id: string; name: string; netHours: number };
+// Net time is added up in seconds, then shown both ways: "9h 49m (9.82)".
+// The Attendance page shows hours and minutes; payroll uses the decimal.
+type RangeRow = { staff_id: string; name: string; netSeconds: number };
 
 export default function ReportsPage() {
   const [tab, setTab] = useState<"today" | "range">("today");
@@ -54,7 +56,7 @@ export default function ReportsPage() {
     const real: TodayRow[] = (d.rows ?? []).map((r: AttRow) => ({
       staff_id: r.staff_id, staff_name: r.staff_name,
       clockIn: clockTime(r.clock_in), clockOut: r.clock_out ? clockTime(r.clock_out) : "—",
-      net: r.clock_out ? hm(r.net_work_seconds) : "—",
+      net: r.clock_out ? `${hm(r.net_work_seconds)} (${decimalHours(r.net_work_seconds).toFixed(2)})` : "—",
       status: (r.is_stuck ? "Stuck" : r.clock_out ? "Done" : "On Shift") as ShiftStatus,
     }));
     const pending: TodayRow[] = (d.pending ?? []).map((p: PendingRow) => ({
@@ -73,8 +75,8 @@ export default function ReportsPage() {
     const byStaff = new Map<string, RangeRow>();
     for (const row of d.data ?? []) {
       const name = String(row.employee);
-      const cur = byStaff.get(name) ?? { staff_id: name, name, netHours: 0 };
-      cur.netHours += Number(row.net) || 0;
+      const cur = byStaff.get(name) ?? { staff_id: name, name, netSeconds: 0 };
+      cur.netSeconds += Number(row.net_seconds) || 0;
       byStaff.set(name, cur);
     }
     setRangeRows([...byStaff.values()].sort((a, b) => a.name.localeCompare(b.name)));
@@ -171,7 +173,7 @@ export default function ReportsPage() {
                 <tr key={r.staff_id} className="border-t border-neutral-100">
                   <td className="px-3 py-2 font-medium">{r.name}</td>
                   <td className="px-3 py-2 text-neutral-500">{from} → {to}</td>
-                  <td className="px-3 py-2">{r.netHours.toFixed(2)}</td>
+                  <td className="px-3 py-2">{hm(r.netSeconds)} <span className="text-neutral-500">({decimalHours(r.netSeconds).toFixed(2)})</span></td>
                 </tr>
               ))}
             </tbody>
