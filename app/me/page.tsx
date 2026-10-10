@@ -97,12 +97,11 @@ export default function MeDashboard() {
       const { monday, days, from, to } = thisWeek();
       const todayIso = new Date().toISOString().slice(0, 10);
 
-      const [me, rota, att, corr, pay] = await Promise.all([
+      const [me, rota, att, corr] = await Promise.all([
         fetch("/api/auth/me").then((r) => r.json()).catch(() => null),
         fetch(`/api/me/rota?week_start=${monday}`).then((r) => r.json()).catch(() => ({})),
         fetch(`/api/me/attendance?from=${from}&to=${to}`).then((r) => r.json()).catch(() => ({})),
         fetch("/api/me/corrections").then((r) => r.json()).catch(() => ({})),
-        fetch("/api/me/payslips").then((r) => r.json()).catch(() => ({})),
       ]);
       setName(me?.user?.name?.split(" ")[0] ?? "");
 
@@ -149,7 +148,6 @@ export default function MeDashboard() {
       });
 
       const pendingCorr = (corr.requests ?? []).filter((r: { status: string }) => r.status === "pending").length;
-      const latest = (pay.payslips ?? [])[0];
 
       setCards([
         {
@@ -175,17 +173,6 @@ export default function MeDashboard() {
           title: "Corrections",
           href: "/me/requests?tab=corrections",
           body: <p className="text-sm">{pendingCorr > 0 ? `${pendingCorr} awaiting review` : "Nothing pending"}</p>,
-        },
-        {
-          title: "Latest Payslip",
-          href: "/me/payslips",
-          body: latest ? (
-            <p className="text-sm">
-              £{latest.gross_pay.toFixed(2)} · <span className="text-neutral-500">{latest.status.replace("_", " ")}</span>
-            </p>
-          ) : (
-            <p className="text-sm text-neutral-400">Nothing yet</p>
-          ),
         },
       ]);
     };

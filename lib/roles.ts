@@ -13,7 +13,7 @@ export const ROLE_LABEL: Record<string, string> = {
 
 export const roleLabel = (role: string | null | undefined) => (role ? ROLE_LABEL[role] ?? role : "");
 
-/** Front House and Kitchen: only their own pages (/me) — clock-in, rota, payslips, food safety tasks. */
+/** Front House and Kitchen: only their own pages (/me) — clock-in, rota, hours, food safety tasks. Payslips are HR-only, in the Staff Hub. */
 export const isOwnPagesOnly = (role: string) => role === "employee" || role === "kitchen";
 
 /** Manager level: Super admin, Manager — Managers keep everything here. */

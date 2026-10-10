@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { hm, hoursMinutes, dayLabel, clockTime } from "@/lib/format";
+import { hm, dayLabel, clockTime } from "@/lib/format";
 import { confirmDelete } from "@/components/ui/confirm";
 import { ROLE_LABEL } from "@/lib/roles";
 
@@ -50,38 +50,18 @@ type Corr = {
 };
 type Totals = { net_seconds: number; regular_seconds: number; overtime_seconds: number; break_seconds: number; late_seconds: number; days_worked: number };
 type Timesheet = { id: number; status: string; locked: boolean; totals: Totals | null };
-type Payment = { amount: number; method: string | null; paid_at: string; notes: string | null };
-type PayrollEntry = {
-  id: number;
-  period_start: string | null;
-  period_end: string | null;
-  hours_worked: number;
-  gross_pay: number;
-  paid_amount: number;
-  outstanding: number;
-  status: string;
-  payments: Payment[];
-};
 type Profile = {
   canEditLockedTimes: boolean;
   staff: Staff;
   range: { range: string; from: string; to: string };
-  summary: { hours_seconds: number; days_worked: number; scheduled_days: number; late_count: number; absences: number; gross_pay: number; outstanding_pay: number };
+  summary: { hours_seconds: number; days_worked: number; scheduled_days: number; late_count: number; absences: number };
   attendance: Row[];
   corrections: Corr[];
   timesheet: Timesheet | null;
   week: { from: string; to: string };
-  payroll: PayrollEntry[];
 };
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const STATUS_BADGE: Record<string, string> = {
-  pending: "bg-amber-100 text-amber-700",
-  partially_paid: "bg-blue-100 text-blue-700",
-  paid: "bg-emerald-100 text-emerald-700",
-};
-const gbp = (n: number) => `£${n.toFixed(2)}`;
-const d = (iso: string | null) => (iso ? new Date(iso + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "?");
 
 /** Sessions grouped by work date (in list order), each day's sessions by clock-in — split shifts read as one day. */
 function groupByDay(rows: Row[]): [string, Row[]][] {
@@ -224,8 +204,6 @@ export default function EmployeeProfilePage() {
           { l: "Days worked", v: `${summary.days_worked} / ${summary.scheduled_days}` },
           { l: "Late", v: String(summary.late_count) },
           { l: "Absences", v: String(summary.absences) },
-          { l: "Gross pay", v: gbp(summary.gross_pay) },
-          { l: "Outstanding pay", v: gbp(summary.outstanding_pay) },
         ].map((c) => (
           <div key={c.l} className="rounded-xl border border-neutral-200 bg-white p-3">
             <div className="text-xs text-neutral-400">{c.l}</div>
@@ -351,49 +329,6 @@ export default function EmployeeProfilePage() {
         )}
       </section>
 
-      {/* Payroll — read only */}
-      <section className="mt-6 mb-2">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500">Payroll (view only)</h2>
-        <p className="mt-1 text-xs text-neutral-400">All payroll edits and payments happen in the POS.</p>
-        {data.payroll.length === 0 ? (
-          <p className="mt-2 text-sm text-neutral-400">No pay periods yet.</p>
-        ) : (
-          <div className="mt-2 space-y-3">
-            {data.payroll.map((p) => (
-              <div key={p.id} className="rounded-xl border border-neutral-200 bg-white p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{d(p.period_start)} – {d(p.period_end)}</p>
-                    <p className="text-xs text-neutral-400">{hoursMinutes(p.hours_worked)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold">{gbp(p.gross_pay)}</p>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE[p.status] ?? "bg-neutral-100"}`}>
-                      {p.status.replace("_", " ")}
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-3 grid grid-cols-3 gap-2 border-t border-neutral-100 pt-3 text-center text-sm">
-                  <div><div className="text-xs text-neutral-400">Gross</div><div className="font-medium">{gbp(p.gross_pay)}</div></div>
-                  <div><div className="text-xs text-neutral-400">Paid</div><div className="font-medium text-emerald-600">{gbp(p.paid_amount)}</div></div>
-                  <div><div className="text-xs text-neutral-400">Outstanding</div><div className="font-medium text-amber-600">{gbp(p.outstanding)}</div></div>
-                </div>
-                {p.payments.length > 0 && (
-                  <div className="mt-3 space-y-1">
-                    <p className="text-xs font-semibold uppercase text-neutral-400">Payments</p>
-                    {p.payments.map((pay, i) => (
-                      <div key={i} className="flex items-center justify-between text-xs">
-                        <span>{new Date(pay.paid_at).toLocaleDateString("en-GB")} {pay.method && `· ${pay.method.replace("_", " ")}`}</span>
-                        <span className="font-medium">{gbp(pay.amount)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
 
       {editingRow && <AttendanceEditModal row={editingRow} canEditLockedTimes={data?.canEditLockedTimes === true} onClose={() => setEditingRow(null)} onSaved={() => { setEditingRow(null); load(); }} />}
       {editingRota && <UsualRotaModal staff={staff} onClose={() => setEditingRota(false)} onSaved={() => { setEditingRota(false); load(); }} />}
