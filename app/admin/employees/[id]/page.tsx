@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { hm, dayLabel, clockTime } from "@/lib/format";
+import { hm, hoursMinutes, dayLabel, clockTime } from "@/lib/format";
 import { confirmDelete } from "@/components/ui/confirm";
 import { ROLE_LABEL } from "@/lib/roles";
 
@@ -364,7 +364,7 @@ export default function EmployeeProfilePage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{d(p.period_start)} – {d(p.period_end)}</p>
-                    <p className="text-xs text-neutral-400">{p.hours_worked} h</p>
+                    <p className="text-xs text-neutral-400">{hoursMinutes(p.hours_worked)}</p>
                   </div>
                   <div className="text-right">
                     <p className="font-bold">{gbp(p.gross_pay)}</p>

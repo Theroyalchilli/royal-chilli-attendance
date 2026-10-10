@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { bizDb } from "@/lib/business-db";
 import { requireManager } from "@/lib/guard";
-import { decimalHours, clockTime } from "@/lib/format";
+import { hm, clockTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
       date: r.work_date,
       in: clockTime(r.clock_in),
       out: clockTime(r.clock_out),
-      hours: decimalHours(r.net_work_seconds),
+      hours: hm(r.net_work_seconds),
       status: r.status,
     }));
   } else if (type === "late") {
@@ -68,18 +68,18 @@ export async function GET(req: NextRequest) {
     columns = [
       { key: "employee", header: "Employee" },
       { key: "date", header: "Date" },
-      { key: "regular", header: "Regular h" },
-      { key: "overtime", header: "Overtime h" },
-      { key: "break", header: "Break h" },
-      { key: "net", header: "Net h (decimal)" },
+      { key: "regular", header: "Regular hours" },
+      { key: "overtime", header: "Overtime hours" },
+      { key: "break", header: "Break" },
+      { key: "net", header: "Net hours" },
     ];
     data = (rows ?? []).map((r) => ({
       employee: nameById.get(r.staff_id) ?? "?",
       date: r.work_date,
-      regular: decimalHours(r.regular_seconds),
-      overtime: decimalHours(r.overtime_seconds),
-      break: decimalHours(r.break_seconds),
-      net: decimalHours(r.net_work_seconds),
+      regular: hm(r.regular_seconds),
+      overtime: hm(r.overtime_seconds),
+      break: hm(r.break_seconds),
+      net: hm(r.net_work_seconds),
       // Not a CSV column: lets the page add up exact minutes.
       net_seconds: r.net_work_seconds ?? 0,
     }));

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { hoursMinutes } from "@/lib/format";
 
 type Payment = { amount: number; method: string | null; paid_at: string; notes: string | null };
 type Payslip = {
@@ -55,7 +56,7 @@ export default function MyPayslips() {
               <button onClick={() => setOpen(open === p.id ? null : p.id)} className="flex w-full items-center justify-between text-left">
                 <div>
                   <p className="font-medium">{d(p.period_start)} – {d(p.period_end)}</p>
-                  <p className="text-xs text-neutral-400">{p.hours_worked} h</p>
+                  <p className="text-xs text-neutral-400">{hoursMinutes(p.hours_worked)}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold">{gbp(p.gross_pay)}</p>
