@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { clockTime, decimalHours, hm } from "@/lib/format";
+import { clockTime, hm } from "@/lib/format";
 import { SHIFT_STATUS_BADGE, SHIFT_STATUS_LABEL, type ShiftStatus } from "@/lib/shift-status";
 
 function todayISO() {
@@ -26,8 +26,8 @@ type PendingRow = { staff_id: number; staff_name: string; status: ShiftStatus; s
 type TodayRow = { staff_id: number; staff_name: string; clockIn: string; clockOut: string; net: string; status: ShiftStatus };
 
 type HoursData = { columns: { key: string; header: string }[]; data: Record<string, string | number>[] };
-// Net time is added up in seconds, then shown both ways: "9h 49m (9.82)".
-// The Attendance page shows hours and minutes; payroll uses the decimal.
+// Net time is added up in seconds and shown as hours and minutes ("9h 49m"),
+// the same as the Attendance page.
 type RangeRow = { staff_id: string; name: string; netSeconds: number };
 
 export default function ReportsPage() {
@@ -56,7 +56,7 @@ export default function ReportsPage() {
     const real: TodayRow[] = (d.rows ?? []).map((r: AttRow) => ({
       staff_id: r.staff_id, staff_name: r.staff_name,
       clockIn: clockTime(r.clock_in), clockOut: r.clock_out ? clockTime(r.clock_out) : "—",
-      net: r.clock_out ? `${hm(r.net_work_seconds)} (${decimalHours(r.net_work_seconds).toFixed(2)})` : "—",
+      net: r.clock_out ? hm(r.net_work_seconds) : "—",
       status: (r.is_stuck ? "Stuck" : r.clock_out ? "Done" : "On Shift") as ShiftStatus,
     }));
     const pending: TodayRow[] = (d.pending ?? []).map((p: PendingRow) => ({
@@ -173,7 +173,7 @@ export default function ReportsPage() {
                 <tr key={r.staff_id} className="border-t border-neutral-100">
                   <td className="px-3 py-2 font-medium">{r.name}</td>
                   <td className="px-3 py-2 text-neutral-500">{from} → {to}</td>
-                  <td className="px-3 py-2">{hm(r.netSeconds)} <span className="text-neutral-500">({decimalHours(r.netSeconds).toFixed(2)})</span></td>
+                  <td className="px-3 py-2">{hm(r.netSeconds)}</td>
                 </tr>
               ))}
             </tbody>

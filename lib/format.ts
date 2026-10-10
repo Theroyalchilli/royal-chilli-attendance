@@ -1,9 +1,16 @@
+// Staff hours always read as hours and minutes ("9h 49m"), never 9.82 —
+// on every screen, print and download, here and in the Staff Hub.
 export function hm(seconds: number | null | undefined): string {
-  const s = Math.max(0, Math.round(seconds ?? 0));
-  const h = Math.floor(s / 3600);
-  const m = Math.round((s % 3600) / 60);
+  const mins = Math.max(0, Math.round((seconds ?? 0) / 60));
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
   if (h === 0) return `${m}m`;
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+/** Decimal hours as stored on payroll rows (9.82) → "9h 49m". */
+export function hoursMinutes(hours: number | null | undefined): string {
+  return hm((Number(hours) || 0) * 3600);
 }
 
 export function decimalHours(seconds: number | null | undefined): number {
