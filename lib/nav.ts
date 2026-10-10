@@ -12,7 +12,7 @@ export type NavGroup = { label?: string; items: NavItem[]; badge?: "approvals" }
 // One menu for every role, same on every device (phones get it in the ☰
 // drawer — except employees, whose phones keep the BottomNav, fed from the
 // same items flattened). Managers/hr/admin see the team console AND their own
-// pages, so they never lose the nav when they open their rota/payslips.
+// pages, so they never lose the nav when they open their rota.
 export function navFor(role: StaffRole): NavGroup[] {
   if (isOwnPagesOnly(role)) {
     // The first 4 are the BottomNav's direct slots; the rest go in its "More".
@@ -33,7 +33,6 @@ export function navFor(role: StaffRole): NavGroup[] {
           { href: "/me/food-safety/training", label: "My Training", icon: "🎓", group: "Food Safety" },
         ],
       },
-      { items: [{ href: "/me/payslips", label: "Payslips", icon: "💷" }] },
     ];
   }
 
@@ -89,7 +88,6 @@ export function navFor(role: StaffRole): NavGroup[] {
       { href: "/me/rota", label: "My Rota", icon: "📅" },
       { href: "/me/attendance", label: "My Hours", icon: "✅" },
       { href: "/me/requests", label: "My Requests", icon: "🌴" },
-      { href: "/me/payslips", label: "My Payslips", icon: "💷" },
       { href: "/me/notifications", label: "Notification settings", icon: "🔔" },
     ],
   });

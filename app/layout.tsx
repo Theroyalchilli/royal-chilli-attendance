@@ -18,7 +18,7 @@ const playfair = Playfair_Display({
 // The business comes from the address (attendance.melthouse.co.uk -> Melt
 // House), so a shared link names the right business and shows its picture —
 // drawn by the POS (/og). Unknown addresses keep the original Royal Chilli name.
-const DESCRIPTION = "Clock in and out, see your rota, request leave and view payslips.";
+const DESCRIPTION = "Clock in and out, see your rota and hours, and request leave.";
 
 export async function generateMetadata(): Promise<Metadata> {
   const b = await businessForHost((await headers()).get("host")).catch(() => null);

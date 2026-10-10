@@ -41,7 +41,7 @@ export default function EmployeesPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="text-lg font-semibold">Employees</h1>
-      <p className="mt-1 text-sm text-neutral-500">Pick someone to see their attendance, corrections and payroll.</p>
+      <p className="mt-1 text-sm text-neutral-500">Pick someone to see their attendance and corrections. Payslips are in the Staff Hub → HR.</p>
 
       <input
         value={q}

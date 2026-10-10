@@ -8,7 +8,7 @@ import type { NavItem } from "@/lib/nav";
 // Only the first 4 items get a direct slot — everything after that collapses
 // into the 5th "More" slot's sheet, grouped by `group` where items share one
 // (e.g. Food Safety's Tasks/Allergens/My Training), with ungrouped items
-// (Payslips) listed bare underneath.
+// listed bare underneath.
 const DIRECT_COUNT = 4;
 
 export default function BottomNav({ items }: { items: NavItem[] }) {

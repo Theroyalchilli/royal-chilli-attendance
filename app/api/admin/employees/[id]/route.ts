@@ -56,17 +56,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const second = await db.from("staff").select("rota_start_2, rota_end_2").eq("id", staffId).maybeSingle();
   if (!second.error && second.data) Object.assign(staff, second.data);
 
-  const [{ data: attendance }, { data: shifts }, { data: corrections }, { data: leave }, { data: entries }] =
+  const [{ data: attendance }, { data: shifts }, { data: corrections }, { data: leave }] =
     await Promise.all([
       db.from("attendance").select("*").eq("staff_id", staffId).gte("work_date", from).lte("work_date", to).order("work_date"),
       db.from("shifts").select("shift_date").eq("staff_id", staffId).gte("shift_date", from).lte("shift_date", to).neq("status", "cancelled"),
       db.from("attendance_corrections").select("*").eq("staff_id", staffId).order("created_at", { ascending: false }).limit(20),
       db.from("leave_requests").select("start_date, end_date").eq("staff_id", staffId).eq("status", "approved").lte("start_date", to).gte("end_date", from),
-      db
-        .from("payroll_entries")
-        .select("id, payroll_period_id, hours_worked, gross_pay, paid_amount, status, created_at, payroll_periods(period_start, period_end)")
-        .eq("staff_id", staffId)
-        .order("created_at", { ascending: false }),
     ]);
 
   // --- summary over the range ---
@@ -113,43 +108,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     .eq("period_end", weekTo)
     .maybeSingle();
 
-  // --- payroll: full history, read-only ---
-  const entryList = entries ?? [];
-  const entryIds = entryList.map((e) => e.id);
-  type PaymentRow = { payroll_entry_id: number; amount: number; method: string | null; paid_at: string; notes: string | null };
-  const payments: PaymentRow[] = entryIds.length
-    ? ((
-        await db
-          .from("payroll_payments")
-          .select("payroll_entry_id, amount, method, paid_at, notes")
-          .in("payroll_entry_id", entryIds)
-          .order("paid_at", { ascending: true })
-      ).data as PaymentRow[] | null) ?? []
-    : [];
-  const paymentsByEntry = new Map<number, PaymentRow[]>();
-  for (const p of payments) {
-    if (!paymentsByEntry.has(p.payroll_entry_id)) paymentsByEntry.set(p.payroll_entry_id, []);
-    paymentsByEntry.get(p.payroll_entry_id)!.push(p);
-  }
-  const payroll = entryList.map((e) => {
-    const period = e.payroll_periods as unknown as { period_start: string; period_end: string } | null;
-    const gross = Number(e.gross_pay ?? 0);
-    const paid = Number(e.paid_amount ?? 0);
-    return {
-      id: e.id,
-      period_start: period?.period_start ?? null,
-      period_end: period?.period_end ?? null,
-      hours_worked: Number(e.hours_worked ?? 0),
-      gross_pay: gross,
-      paid_amount: paid,
-      outstanding: Math.round((gross - paid) * 100) / 100,
-      status: e.status,
-      payments: paymentsByEntry.get(e.id) ?? [],
-    };
-  });
-  const grossTotal = payroll.reduce((s, p) => s + p.gross_pay, 0);
-  const paidTotal = payroll.reduce((s, p) => s + p.paid_amount, 0);
-
   return NextResponse.json({
     canEditLockedTimes: g.session.role === "admin",
     staff,
@@ -160,13 +118,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       scheduled_days: scheduledDays,
       late_count: lateCount,
       absences,
-      gross_pay: Math.round(grossTotal * 100) / 100,
-      outstanding_pay: Math.round((grossTotal - paidTotal) * 100) / 100,
     },
     attendance: attendance ?? [],
     corrections: corrections ?? [],
     timesheet: timesheet ?? null,
     week: { from: weekFrom, to: weekTo },
-    payroll,
   });
 }
