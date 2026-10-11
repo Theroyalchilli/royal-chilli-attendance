@@ -27,8 +27,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
                 <button onClick={() => window.location.reload()} style={{ ...btn, background: "#dc2626", color: "#fff", border: "none" }}>Try Again</button>
                 <button onClick={() => (window.location.href = "/")} style={{ ...btn, background: "transparent", color: "#1c1917", border: "1px solid #d6d3d1" }}>Back to Home</button>
               </div>
-              <p style={{ fontSize: 12, color: "#78716c", marginTop: 24 }}>If you still need help, please contact The Royal Chilli team.</p>
-              <p style={{ fontSize: 12, color: "#78716c", margin: 0 }}>Authentic Flavours. Memorable Experiences.</p>
+              <p style={{ fontSize: 12, color: "#78716c", marginTop: 24 }}>If you still need help, please ask your manager.</p>
             </div>
           )}
         </div>
