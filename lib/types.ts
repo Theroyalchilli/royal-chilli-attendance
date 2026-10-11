@@ -1,5 +1,5 @@
 // Matches royal-chilli-pos's `staff.role`: five roles (names in lib/roles.ts).
-export type StaffRole = "employee" | "kitchen" | "manager" | "hr" | "admin";
+export type StaffRole = "employee" | "kitchen" | "bar" | "manager" | "supervisor" | "hr" | "admin";
 
 export type SessionUser = {
   id: number;
