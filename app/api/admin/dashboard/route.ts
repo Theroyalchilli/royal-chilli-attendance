@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isOnRota } from "@/lib/roles";
 import { bizDb } from "@/lib/business-db";
 import { staffIdsAt } from "@/lib/business";
 import { requireManager } from "@/lib/guard";
@@ -191,7 +192,7 @@ export async function GET(req: NextRequest) {
     const doneTypes = new Set(checkLogsToday.map((c) => c.check_type_id));
     const failuresToday = checkLogsToday.filter((c) => !c.ok).length + tempLogsToday.filter((t) => !t.pass).length;
 
-    const staffIdsInScope = new Set((staff ?? []).filter((s) => s.role !== "hr").map((s) => s.id));
+    const staffIdsInScope = new Set((staff ?? []).filter((s) => isOnRota(s.role)).map((s) => s.id));
     const latest = new Map<string, string>(); // "staffId:courseId" -> date_done
     for (const r of trainingRecords) {
       const key = `${r.staff_id}:${r.course_id}`;
