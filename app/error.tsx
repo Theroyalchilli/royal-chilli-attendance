@@ -39,8 +39,7 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
           </button>
           <a href={home} className="rounded-xl border border-neutral-300 px-4 py-3 text-sm font-semibold">Back to Home</a>
         </div>
-        <p className="mt-6 text-xs text-neutral-500">If you still need help, please contact The Royal Chilli team.</p>
-        <p className="mt-1 text-xs text-neutral-500">Authentic Flavours. Memorable Experiences.</p>
+        <p className="mt-6 text-xs text-neutral-500">If you still need help, please ask your manager.</p>
         {error.digest && <p className="mt-3 text-[11px] text-neutral-400">Error ref: {error.digest}</p>}
       </div>
     </div>
