@@ -37,6 +37,9 @@ export default function LoginPage() {
     e.preventDefault();
     setBusy(true);
     setError("");
+    // Stays busy once signed in: a second press would sign in again and
+    // restart the next page's load.
+    let leaving = false;
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
@@ -48,9 +51,10 @@ export default function LoginPage() {
         setError(data.error || "Login failed");
         return;
       }
+      leaving = true;
       freshStart(dest(data.user.role));
     } finally {
-      setBusy(false);
+      if (!leaving) setBusy(false);
     }
   }
 
@@ -90,7 +94,7 @@ export default function LoginPage() {
           disabled={busy}
           className="mt-4 h-11 w-full rounded-xl bg-brand font-semibold text-white hover:bg-brand-dark disabled:opacity-50"
         >
-          {busy ? "Signing in…" : "Sign in"}
+          {busy ? "Opening…" : "Sign in"}
         </button>
       </form>
     </main>
