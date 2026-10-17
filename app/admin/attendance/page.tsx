@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { clockTime, dayLabel, hm } from "@/lib/format";
 import { SHIFT_STATUS_BADGE, SHIFT_STATUS_LABEL, type ShiftStatus } from "@/lib/shift-status";
 import { confirmDelete, confirmDialog } from "@/components/ui/confirm";
+import { shiftActions, LEAVE_TYPE_LABEL, ABSENT_AFTER_MINUTES, type ShiftAction, type ShiftLeaveType } from "@/lib/shift-actions";
 
 type Row = {
   id: number;
@@ -45,10 +46,14 @@ type Pending = {
   shift_start: string;
   shift_end: string;
   status: ShiftStatus;
-  state: "pending" | "absent" | "leave" | "holiday" | "request_pending";
+  state: "pending" | "absent" | "leave" | "holiday" | "request_pending" | "cancelled";
   leave_type: string | null;
   canMarkAbsent: boolean;
+  ended: boolean;
+  canUndo: boolean;
 };
+/** A choice from the "Choose…" menu that needs confirming (with an optional note). */
+type StatusTarget = { p: Pending; action: Exclude<ShiftAction, "clock_in" | "undo"> };
 
 /** One person's day: every session they worked plus any shift still waiting on a clock-in. */
 type PersonDay = { staff_id: number; staff_name: string; sessions: Row[]; pending: Pending[] };
@@ -122,7 +127,7 @@ export default function AttendancePage() {
   const [adding, setAdding] = useState(false);
   const [quickClockIn, setQuickClockIn] = useState<Pending | null>(null);
   const [openTargetId, setOpenTargetId] = useState<number | null>(null);
-  const [sickLeaveTarget, setSickLeaveTarget] = useState<Pending | null>(null);
+  const [statusTarget, setStatusTarget] = useState<StatusTarget | null>(null);
   const [statusBusy, setStatusBusy] = useState<number | null>(null);
   const [statusError, setStatusError] = useState("");
 
@@ -183,20 +188,20 @@ export default function AttendancePage() {
   }
   const rangeNoun = range === "day" ? "Day" : range === "week" ? "Week" : "Month";
 
-  async function updateShiftStatus(p: Pending, action: "absent" | "undo_absent" | "sick_leave", reason?: string) {
+  async function updateShiftStatus(p: Pending, action: "absent" | "leave" | "cancel" | "undo", extra: { leave_type?: ShiftLeaveType; reason?: string } = {}) {
     setStatusBusy(p.shift_id);
     setStatusError("");
     try {
       const res = await fetch("/api/admin/attendance/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shift_id: p.shift_id, action, reason }),
+        body: JSON.stringify({ shift_id: p.shift_id, action, ...extra }),
       });
       if (!res.ok) {
         setStatusError((await res.json().catch(() => ({}))).error || "Couldn't update this shift status.");
         return false;
       }
-      setSickLeaveTarget(null);
+      setStatusTarget(null);
       await load();
       return true;
     } catch {
@@ -205,6 +210,18 @@ export default function AttendancePage() {
     } finally {
       setStatusBusy(null);
     }
+  }
+
+  async function choose(p: Pending, action: ShiftAction) {
+    if (action === "clock_in") return setQuickClockIn(p);
+    if (action === "undo") {
+      if (await confirmDialog({ title: "Undo?", message: `${p.staff_name}'s ${p.shift_start}–${p.shift_end} shift will go back to scheduled.`, confirmLabel: "Undo" })) {
+        await updateShiftStatus(p, "undo");
+      }
+      return;
+    }
+    setStatusError("");
+    setStatusTarget({ p, action });
   }
 
   const grouped = useMemo(() => {
@@ -348,7 +365,7 @@ export default function AttendancePage() {
                           </tr>
                         )),
                         ...person.pending.map((p, i) => (
-                          <tr key={`pending-${p.shift_id}`} className={`${p.state === "leave" || p.state === "holiday" ? "bg-purple-50/50" : p.state === "absent" ? "bg-red-50/50" : "bg-amber-50/50"} ${lineBorder(person.sessions.length === 0 && i === 0)}`}>
+                          <tr key={`pending-${p.shift_id}`} className={`${p.state === "leave" || p.state === "holiday" ? "bg-purple-50/50" : p.state === "absent" ? "bg-red-50/50" : p.state === "cancelled" ? "bg-neutral-50" : p.status === "Upcoming" ? "" : "bg-amber-50/50"} ${lineBorder(person.sessions.length === 0 && i === 0)}`}>
                             {nameCell()}
                             <td className="px-3 py-2 text-neutral-500">{p.shift_start} – {p.shift_end}</td>
                             <td className="px-3 py-2 text-neutral-400">—</td>
@@ -356,33 +373,21 @@ export default function AttendancePage() {
                             <td className="px-3 py-2 text-neutral-400">—</td>
                             <td className="px-3 py-2">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${p.state === "leave" || p.state === "holiday" || p.state === "request_pending" ? "bg-purple-100 text-purple-700" : p.state === "absent" || p.status === "Absent" ? SHIFT_STATUS_BADGE.Absent : SHIFT_STATUS_BADGE[p.status]}`}>
-                                  {p.state === "holiday" ? "Holiday" : p.state === "leave" ? p.leave_type === "sick" ? "Sick" : p.leave_type === "unpaid" ? "Unpaid leave" : "Leave" : p.state === "request_pending" ? `Leave requested · ${p.leave_type ?? "Review"}` : p.state === "absent" ? "Absent" : SHIFT_STATUS_LABEL[p.status]}
+                                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${p.state === "cancelled" ? "bg-neutral-200 text-neutral-600" : p.state === "leave" || p.state === "holiday" || p.state === "request_pending" ? "bg-purple-100 text-purple-700" : p.state === "absent" || p.status === "Absent" ? SHIFT_STATUS_BADGE.Absent : SHIFT_STATUS_BADGE[p.status]}`}>
+                                  {p.state === "cancelled" ? "Not needed" : p.state === "holiday" ? "Holiday" : p.state === "leave" ? p.leave_type === "sick" ? "Sick" : p.leave_type === "unpaid" ? "Unpaid leave" : "Leave" : p.state === "request_pending" ? `Leave requested · ${p.leave_type ?? "Review"}` : p.state === "absent" ? "Absent" : SHIFT_STATUS_LABEL[p.status]}
                                 </span>
-                                {p.state === "absent" ? (
-                                  <button onClick={async () => {
-                                    if (await confirmDialog({ title: "Undo recorded absence?", message: `${p.staff_name}'s ${p.shift_start}–${p.shift_end} shift will return to scheduled.`, confirmLabel: "Undo absence" })) {
-                                      await updateShiftStatus(p, "undo_absent");
-                                    }
-                                  }} disabled={statusBusy === p.shift_id} className="rounded-lg border border-neutral-300 px-2 py-1 text-xs font-medium hover:bg-white disabled:opacity-50">
-                                    Undo
-                                  </button>
-                                ) : p.state === "pending" && p.canMarkAbsent ? (
-                                  <>
-                                    <button onClick={async () => {
-                                      if (await confirmDialog({ title: "Record absence?", message: `Mark ${p.staff_name}'s ${p.shift_start}–${p.shift_end} shift as missed?`, confirmLabel: "Mark absent" })) {
-                                        await updateShiftStatus(p, "absent");
-                                      }
-                                    }} disabled={statusBusy === p.shift_id} className="rounded-lg border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50">
-                                      Mark absent
-                                    </button>
-                                    <button onClick={() => setSickLeaveTarget(p)} disabled={statusBusy === p.shift_id} className="rounded-lg border border-purple-200 px-2 py-1 text-xs font-medium text-purple-700 hover:bg-purple-50 disabled:opacity-50">
-                                      Record sick leave
-                                    </button>
-                                  </>
-                                ) : p.status === "Not in" || p.status === "Stuck" ? (
-                                  <button onClick={() => setQuickClockIn(p)} className="rounded-lg bg-brand px-2 py-1 text-xs font-semibold text-white hover:bg-brand-dark">Clock in now</button>
-                                ) : null}
+                                {shiftActions(p).length > 0 && (
+                                  <select
+                                    value=""
+                                    disabled={statusBusy === p.shift_id}
+                                    onChange={(e) => { const a = e.target.value as ShiftAction; e.target.value = ""; if (a) choose(p, a); }}
+                                    aria-label={`Choose a status for ${p.staff_name}`}
+                                    className="rounded-lg border border-neutral-300 bg-white px-2 py-1 text-xs font-medium hover:bg-neutral-50 disabled:opacity-50"
+                                  >
+                                    <option value="">{statusBusy === p.shift_id ? "Saving…" : "Choose…"}</option>
+                                    {shiftActions(p).map((a) => <option key={a.key} value={a.key}>{a.label}</option>)}
+                                  </select>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -424,41 +429,56 @@ export default function AttendancePage() {
         <ManualEntryModal
           staff={staff}
           canEditLockedTimes={canEditLockedTimes}
-          prefill={{ staffId: String(quickClockIn.staff_id), workDate: quickClockIn.work_date, clockIn: toLocalInput(new Date().toISOString()) }}
+          prefill={{ staffId: String(quickClockIn.staff_id), workDate: quickClockIn.work_date, clockIn: quickClockIn.ended ? `${quickClockIn.work_date}T${quickClockIn.shift_start}` : toLocalInput(new Date().toISOString()) }}
           onEditExisting={(row) => { setQuickClockIn(null); setEditing(row); }}
           onClose={() => setQuickClockIn(null)}
           onSaved={() => { setQuickClockIn(null); load(); }}
         />
       )}
-      {sickLeaveTarget && (
-        <SickLeaveModal
-          pending={sickLeaveTarget}
-          busy={statusBusy === sickLeaveTarget.shift_id}
-          onClose={() => setSickLeaveTarget(null)}
-          onSave={(reason) => updateShiftStatus(sickLeaveTarget, "sick_leave", reason)}
+      {statusTarget && (
+        <StatusModal
+          target={statusTarget}
+          busy={statusBusy === statusTarget.p.shift_id}
+          error={statusError}
+          onClose={() => setStatusTarget(null)}
+          onSave={(reason) => {
+            const { p, action } = statusTarget;
+            return action === "absent" || action === "cancel"
+              ? updateShiftStatus(p, action, { reason })
+              : updateShiftStatus(p, "leave", { leave_type: action, reason });
+          }}
         />
       )}
     </div>
   );
 }
 
-function SickLeaveModal({ pending, busy, onClose, onSave }: { pending: Pending; busy: boolean; onClose: () => void; onSave: (reason: string) => Promise<boolean> }) {
+const STATUS_COPY: Record<StatusTarget["action"], { title: string; note: string; button: string; tone: string }> = {
+  absent: { title: "Mark absent (no show)", note: `Records the shift as missed. Allowed from ${ABSENT_AFTER_MINUTES} minutes after it starts.`, button: "Mark absent", tone: "bg-red-600 hover:bg-red-700" },
+  sick: { title: `Record ${LEAVE_TYPE_LABEL.sick.toLowerCase()} leave`, note: "Records approved sick leave for this date. It won't add worked hours.", button: "Confirm sick", tone: "bg-purple-700 hover:bg-purple-800" },
+  holiday: { title: "Record holiday", note: "Records approved holiday for this date. It won't add worked hours.", button: "Confirm holiday", tone: "bg-purple-700 hover:bg-purple-800" },
+  unpaid: { title: "Record unpaid leave", note: "Records approved unpaid leave for this date. It won't add worked hours.", button: "Confirm unpaid leave", tone: "bg-purple-700 hover:bg-purple-800" },
+  cancel: { title: "Shift not needed", note: "Takes this shift off the rota and stops its reminders. They get a notification.", button: "Take off rota", tone: "bg-neutral-800 hover:bg-neutral-900" },
+};
+
+function StatusModal({ target, busy, error, onClose, onSave }: { target: StatusTarget; busy: boolean; error: string; onClose: () => void; onSave: (reason: string) => Promise<boolean> }) {
   const [reason, setReason] = useState("");
-  const [error, setError] = useState("");
+  const { p, action } = target;
+  const copy = STATUS_COPY[action];
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-5">
-        <h2 className="font-semibold">Record sick leave</h2>
-        <p className="mt-1 text-sm text-neutral-600">{pending.staff_name} · {dayLabel(pending.work_date)} · {pending.shift_start}–{pending.shift_end}</p>
-        <p className="mt-3 rounded-lg bg-purple-50 px-3 py-2 text-xs text-purple-800">This records approved sick leave for this date. It won&apos;t add worked hours.</p>
+        <h2 className="font-semibold">{copy.title}</h2>
+        <p className="mt-1 text-sm text-neutral-600">{p.staff_name} · {dayLabel(p.work_date)} · {p.shift_start}–{p.shift_end}</p>
+        <p className="mt-3 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-700">{copy.note}</p>
         <label className="mt-3 block text-xs text-neutral-500">Note (optional)
           <textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} rows={3} className="mt-1 w-full resize-y rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900" />
         </label>
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
         <div className="mt-4 flex gap-2">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
-          <button onClick={async () => { setError(""); if (!(await onSave(reason))) setError("Couldn't record sick leave. Please try again."); }} disabled={busy} className="flex-1 rounded-xl bg-purple-700 py-2.5 text-sm font-semibold text-white hover:bg-purple-800 disabled:opacity-50">
-            {busy ? "Saving…" : "Confirm leave"}
+          <button onClick={() => onSave(reason)} disabled={busy} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${copy.tone}`}>
+            {busy ? "Saving…" : copy.button}
           </button>
         </div>
       </div>

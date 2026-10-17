@@ -8,6 +8,7 @@ import { loadStaffRota, resolveScheduleFor } from "@/lib/rota";
 import { recompute, audit } from "@/lib/attendance-write";
 import { classifyShiftStatus } from "@/lib/shift-status";
 import { resolveScheduled } from "@/lib/time-engine";
+import { ABSENT_AFTER_MINUTES } from "@/lib/shift-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,8 @@ export async function GET(req: NextRequest) {
   if (to) q = q.lte("work_date", to);
   if (staffId) q = q.eq("staff_id", Number(staffId));
 
-  let shiftsQ = db.from("shifts").select("id, staff_id, shift_date, start_time, end_time, status").neq("status", "cancelled");
+  // Cancelled ones too: a shift marked "not needed" here stays listed so it can be undone.
+  let shiftsQ = db.from("shifts").select("id, staff_id, shift_date, start_time, end_time, status");
   if (from) shiftsQ = shiftsQ.gte("shift_date", from);
   if (to) shiftsQ = shiftsQ.lte("shift_date", to);
   if (staffId) shiftsQ = shiftsQ.eq("staff_id", Number(staffId));
@@ -35,7 +37,7 @@ export async function GET(req: NextRequest) {
   if (from && to) leaveQ = leaveQ.lte("start_date", to).gte("end_date", from);
   if (staffId) leaveQ = leaveQ.eq("staff_id", Number(staffId));
 
-  const [{ data: rows, error }, { data: staff }, { data: shifts }, { data: leaveRows, error: leaveError }, settings, { data: openRows }] = await Promise.all([
+  const [{ data: rows, error }, { data: staff }, { data: allShifts }, { data: leaveRows, error: leaveError }, settings, { data: openRows }] = await Promise.all([
     q,
     db.from("staff").select("id, name").eq("active", 1).in("id", await staffIdsAt(g.session.businessId)).order("name"),
     shiftsQ,
@@ -46,6 +48,8 @@ export async function GET(req: NextRequest) {
     db.from("attendance").select("staff_id, clock_in").is("clock_out", null).not("clock_in", "is", null),
   ]);
   if (error || leaveError) return NextResponse.json({ error: "Failed to load" }, { status: 500 });
+  const shifts = (allShifts ?? []).filter((s) => s.status !== "cancelled");
+  const cancelledShifts = (allShifts ?? []).filter((s) => s.status === "cancelled");
 
   const nameById = new Map((staff ?? []).map((s) => [s.id, s.name]));
   const today = localDateString(new Date(), settings.timezone);
@@ -72,17 +76,18 @@ export async function GET(req: NextRequest) {
     return attendedShift.has(s.id) || (shiftsPerDay.get(k) === 1 && attendedKey.has(k));
   };
   const now = new Date();
-  const pending = (shifts ?? [])
-    .filter((s) => !attended(s))
+  const pending = [...shifts.filter((s) => !attended(s)), ...cancelledShifts]
     .map((s) => {
       const start = s.start_time.slice(0, 5);
       const end = s.end_time.slice(0, 5);
       const matchingLeave = (leaveRows ?? []).filter((l) => l.staff_id === s.staff_id && s.shift_date >= l.start_date && s.shift_date <= l.end_date);
       const leave = matchingLeave.find((l) => l.status === "approved") ?? matchingLeave.find((l) => l.status === "pending");
-      const state = leave?.status === "approved"
+      const state = s.status === "cancelled" ? "cancelled"
+        : leave?.status === "approved"
         ? (leave.leave_type === "holiday" ? "holiday" : "leave")
         : leave?.status === "pending" ? "request_pending" : s.status === "missed" ? "absent" : "pending";
-      const scheduledEnd = resolveScheduled(s.shift_date, start, end, settings.timezone).end;
+      const scheduled = resolveScheduled(s.shift_date, start, end, settings.timezone);
+      const scheduledEnd = scheduled.end;
       return {
         shift_id: s.id,
         staff_id: s.staff_id,
@@ -96,10 +101,15 @@ export async function GET(req: NextRequest) {
         }),
         state,
         leave_type: leave?.leave_type ?? null,
-        canMarkAbsent: state === "pending" && !staleOpenSet.has(s.staff_id) && scheduledEnd <= now,
+        // No-show: from ABSENT_AFTER_MINUTES after the start (was: after the end).
+        canMarkAbsent: state === "pending" && !staleOpenSet.has(s.staff_id) && now.getTime() >= scheduled.start.getTime() + ABSENT_AFTER_MINUTES * 60_000,
+        ended: scheduledEnd <= now,
+        // Undo only what this page can set: absent, not needed, or a one-day leave.
+        canUndo: state === "absent" || state === "cancelled" || ((state === "leave" || state === "holiday") && leave?.start_date === s.shift_date && leave?.end_date === s.shift_date),
       };
     })
-    .filter((p) => p.state !== "pending" || p.status !== "Upcoming");
+    // Today's later shifts are listed too, so a phone-in (sick, holiday) can be recorded before the start.
+    .filter((p) => p.state !== "pending" || p.status !== "Upcoming" || p.work_date === today);
 
   // The shift(s) currently on the rota for each person/day — shown in the
   // Rota column. Live rota, not the schedule snapshotted at clock-in, so it

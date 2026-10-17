@@ -59,7 +59,8 @@ export default function ReportsPage() {
       net: r.clock_out ? hm(r.net_work_seconds) : "—",
       status: (r.is_stuck ? "Stuck" : r.clock_out ? "Done" : "On Shift") as ShiftStatus,
     }));
-    const pending: TodayRow[] = (d.pending ?? []).map((p: PendingRow) => ({
+    // Attendance also lists today's later shifts and "not needed" ones; Reports keeps its old list.
+    const pending: TodayRow[] = (d.pending ?? []).filter((p: PendingRow) => p.state !== "cancelled" && !(p.state === "pending" && p.status === "Upcoming")).map((p: PendingRow) => ({
       staff_id: p.staff_id, staff_name: p.staff_name, clockIn: "—", clockOut: "—", net: "—",
       status: p.state === "holiday" ? "Holiday" : p.state === "leave" ? "Leave" : p.state === "request_pending" ? "Leave requested" : p.state === "absent" ? "Absent" : p.status,
     }));
