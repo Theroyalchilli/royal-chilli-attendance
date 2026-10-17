@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { bizDb } from "@/lib/business-db";
 import { getBusiness, staffIdsAt } from "@/lib/business";
 import { requireManager } from "@/lib/guard";
-import { hm } from "@/lib/format";
+import { hm, roundedShiftSeconds } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +59,12 @@ export async function POST(req: NextRequest) {
     { text: DIVIDER },
   ];
 
+  // Real hours -> each shift rounded to the half hour (shown only; pay stays real).
+  const both = (real: number, rounded: number) => `${hm(real)} -> ${hm(rounded)}`;
+  t.push({ text: "Hours: real -> rounded to half hour", align: "center" }, { text: "" });
+
   let total = 0;
+  let totalRounded = 0;
   let people = 0;
   for (const s of staff ?? []) {
     const rows = byStaff.get(s.id) ?? [];
@@ -67,16 +72,18 @@ export async function POST(req: NextRequest) {
     const fromSheet = sheetTotal.get(s.id);
     const net = Number.isFinite(fromSheet) ? (fromSheet as number) : live;
     if (!rows.length && !net) continue; // didn't work this week
+    const rounded = rows.reduce((sum, r) => sum + roundedShiftSeconds(r.net_work_seconds), 0);
     people++;
     total += net;
-    t.push({ text: row(s.name, hm(net)), bold: true });
+    totalRounded += rounded;
+    t.push({ text: row(s.name, both(net, rounded)), bold: true });
     for (const r of rows) {
-      t.push({ text: row(`  ${day(r.work_date)}  ${r.clock_in ? time(r.clock_in) : "--:--"}-${r.clock_out ? time(r.clock_out) : "--:--"}`, hm(r.net_work_seconds)) });
+      t.push({ text: row(`  ${day(r.work_date)}  ${r.clock_in ? time(r.clock_in) : "--:--"}-${r.clock_out ? time(r.clock_out) : "--:--"}`, both(r.net_work_seconds ?? 0, roundedShiftSeconds(r.net_work_seconds))) });
     }
     t.push({ text: "" });
   }
   if (people === 0) t.push({ text: "No hours recorded this week.", align: "center" }, { text: "" });
-  t.push({ text: DIVIDER }, { text: row(`TOTAL (${people} ${people === 1 ? "person" : "people"})`, hm(total)), bold: true });
+  t.push({ text: DIVIDER }, { text: row(`TOTAL (${people} ${people === 1 ? "person" : "people"})`, both(total, totalRounded)), bold: true });
 
   const { error } = await db.from("print_jobs").insert({ kind: "text", content: JSON.stringify(t) });
   if (error) {

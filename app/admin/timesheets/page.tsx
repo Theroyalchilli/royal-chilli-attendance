@@ -1,15 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { hm, decimalHours } from "@/lib/format";
+import { Fragment, useCallback, useEffect, useState } from "react";
+import { hm, decimalHours, roundedShiftSeconds, clockTime, dayLabel } from "@/lib/format";
 
 type Totals = { net_seconds: number; regular_seconds: number; overtime_seconds: number; break_seconds: number; late_seconds: number; days_worked: number };
 type Sheet = { id: number; status: string; locked: boolean; totals: Totals | null };
+type Day = { work_date: string; net_work_seconds: number | null; clock_in: string | null; clock_out: string | null };
 type Item = {
   staff_id: number;
   staff_name: string;
   pay_rate: number | null;
   live_totals: Totals;
+  days: Day[];
   sheet: Sheet | null;
 };
 
@@ -33,6 +35,14 @@ export default function TimesheetsPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [printMsg, setPrintMsg] = useState("");
+  const [open, setOpen] = useState<Set<number>>(new Set());
+  const toggle = (id: number) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   // The week's hours on the till's 80mm printer (printed by the Print Station).
   async function printHours() {
@@ -100,6 +110,9 @@ export default function TimesheetsPage() {
       <p className="mt-1 text-xs text-neutral-400">
         Generate builds a timesheet per person from this week&apos;s closed shifts. Locked ones are left alone and are what Payroll reads.
       </p>
+      <p className="mt-1 text-xs text-neutral-400">
+        Rounded = each shift rounded to the half hour (:00–:14 down, :15–:44 to :30, :45–:59 up). Shown only; pay uses the real hours. Tap a name to see each day.
+      </p>
 
       {loading ? (
         <p className="mt-8 text-sm text-neutral-400">Loading…</p>
@@ -113,6 +126,7 @@ export default function TimesheetsPage() {
                 <th className="px-3 py-2">Regular</th>
                 <th className="px-3 py-2">OT</th>
                 <th className="px-3 py-2">Net</th>
+                <th className="px-3 py-2">Rounded</th>
                 <th className="px-3 py-2">Est. pay</th>
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2"></th>
@@ -123,13 +137,27 @@ export default function TimesheetsPage() {
                 const t = it.sheet?.totals ?? it.live_totals;
                 const stale = it.sheet && it.sheet.totals && it.sheet.totals.net_seconds !== it.live_totals.net_seconds;
                 const pay = it.pay_rate ? `£${(decimalHours(t.net_seconds) * it.pay_rate).toFixed(2)}` : "—";
+                const days = (it.days ?? []).filter((d) => d.clock_out);
+                const rounded = days.reduce((sum, d) => sum + roundedShiftSeconds(d.net_work_seconds), 0);
+                const isOpen = open.has(it.staff_id);
                 return (
-                  <tr key={it.staff_id} className="border-t border-neutral-100">
-                    <td className="px-3 py-2 font-medium">{it.staff_name}</td>
+                  <Fragment key={it.staff_id}>
+                  <tr className="border-t border-neutral-100">
+                    <td className="px-3 py-2 font-medium">
+                      {days.length ? (
+                        <button onClick={() => toggle(it.staff_id)} className="text-left hover:underline" aria-expanded={isOpen}>
+                          <span className="mr-1 inline-block w-3 text-neutral-400">{isOpen ? "▾" : "▸"}</span>
+                          {it.staff_name}
+                        </button>
+                      ) : (
+                        <span className="pl-4">{it.staff_name}</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-neutral-500">{t.days_worked}</td>
                     <td className="px-3 py-2">{hm(t.regular_seconds)}</td>
                     <td className="px-3 py-2">{t.overtime_seconds ? hm(t.overtime_seconds) : "—"}</td>
                     <td className="px-3 py-2 font-medium">{hm(t.net_seconds)}</td>
+                    <td className="px-3 py-2 font-medium text-brand">{days.length ? hm(rounded) : "—"}</td>
                     <td className="px-3 py-2 text-neutral-500">{pay}</td>
                     <td className="px-3 py-2 text-xs">
                       {it.sheet ? STATUS_LABEL[it.sheet.status] : <span className="text-neutral-400">not generated</span>}
@@ -142,6 +170,26 @@ export default function TimesheetsPage() {
                       {it.sheet?.status === "locked" && <button onClick={() => move(it.sheet!.id, "approved")} className="text-neutral-400 hover:underline">unlock</button>}
                     </td>
                   </tr>
+                  {isOpen && (
+                    <tr className="bg-neutral-50/60">
+                      <td colSpan={9} className="px-3 pb-3 pt-1">
+                        <table className="w-full text-xs">
+                          <tbody>
+                            {days.map((d, i) => (
+                              <tr key={i} className="text-neutral-600">
+                                <td className="py-1 pl-4">{dayLabel(d.work_date)}</td>
+                                <td className="py-1">{clockTime(d.clock_in)} – {clockTime(d.clock_out)}</td>
+                                <td className="py-1 text-right">{hm(d.net_work_seconds)}</td>
+                                <td className="w-6 py-1 text-center text-neutral-400">→</td>
+                                <td className="py-1 pr-2 font-medium text-neutral-800">{hm(roundedShiftSeconds(d.net_work_seconds))}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
             </tbody>
