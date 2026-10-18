@@ -25,6 +25,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   ] as const) {
     if (key in body) patch[key] = coerce(body[key]);
   }
+  // "Show on rota" (POS migration 138)
+  if (typeof body.on_rota === "boolean") patch.on_rota = body.on_rota;
   if ("rota_working_days" in body && Array.isArray(body.rota_working_days)) {
     patch.rota_working_days = body.rota_working_days
       .map(Number)

@@ -37,8 +37,9 @@ export async function POST(req: NextRequest) {
   // Not Super admin or HR — they don't go on the rota.
   const notOnRota = `(${NOT_ON_ROTA.join(",")})`;
   const here = await staffIdsAt(g.session.businessId);
-  const withSecond = await db.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1).in("id", here).not("role", "in", notOnRota);
-  const staff = (withSecond.error ? (await db.from("staff").select(cols).eq("active", 1).in("id", here).not("role", "in", notOnRota)).data : withSecond.data) as
+  // ...nor anyone with "Show on the Rota" unticked (POS migration 138).
+  const withSecond = await db.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1).eq("on_rota", true).in("id", here).not("role", "in", notOnRota);
+  const staff = (withSecond.error ? (await db.from("staff").select(cols).eq("active", 1).eq("on_rota", true).in("id", here).not("role", "in", notOnRota)).data : withSecond.data) as
     | { id: number; rota_start: string | null; rota_end: string | null; rota_start_2?: string | null; rota_end_2?: string | null; rota_working_days: number[] | null }[]
     | null;
 

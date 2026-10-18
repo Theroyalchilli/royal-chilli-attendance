@@ -43,7 +43,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     db
       .from("staff")
       .select(
-        "id, name, role, employee_number, employment_type, pay_rate, active, rota_start, rota_end, rota_working_days, rota_break_minutes, rota_grace_minutes",
+        "id, name, role, employee_number, employment_type, pay_rate, active, rota_start, rota_end, rota_working_days, rota_break_minutes, rota_grace_minutes, on_rota",
       )
       .eq("id", staffId)
       .maybeSingle(),
