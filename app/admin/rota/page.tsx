@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { confirmDelete } from "@/components/ui/confirm";
+import { ukMonday, ukToday } from "@/lib/uk-date";
 
 type Staff = {
   id: number;
@@ -14,11 +15,6 @@ type Staff = {
 type Shift = { id: number; staff_id: number; shift_date: string; start_time: string; end_time: string };
 type Leave = { staff_id: number; start_date: string; end_date: string; leave_type: string };
 
-function mondayOf(d = new Date()) {
-  const x = new Date(d);
-  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
-  return x.toISOString().slice(0, 10);
-}
 function shiftWeek(iso: string, weeks: number) {
   const d = new Date(iso + "T12:00:00Z");
   d.setUTCDate(d.getUTCDate() + weeks * 7);
@@ -29,10 +25,10 @@ const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // Rota is forward scheduling. Once a day is over, what actually happened
 // lives in Attendance — the shift grid becomes read-only history instead.
-const todayIso = () => new Date().toISOString().slice(0, 10);
+const todayIso = () => ukToday();
 
 export default function RotaPage() {
-  const [weekStart, setWeekStart] = useState(mondayOf());
+  const [weekStart, setWeekStart] = useState(ukMonday());
   const [days, setDays] = useState<string[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -116,7 +112,7 @@ export default function RotaPage() {
           {new Date(days[6] + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
         </span>
         <button onClick={() => setWeekStart(shiftWeek(weekStart, 1))} className="rounded-lg border border-neutral-300 px-2 py-1.5">→</button>
-        <button onClick={() => setWeekStart(mondayOf())} className="rounded-lg border border-neutral-300 px-2 py-1.5 text-xs">This week</button>
+        <button onClick={() => setWeekStart(ukMonday())} className="rounded-lg border border-neutral-300 px-2 py-1.5 text-xs">This week</button>
         {!weekIsPast && (
           <div className="ml-auto flex gap-2">
             <button onClick={() => generate("copy_previous")} disabled={busy} className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs disabled:opacity-50">Copy last week</button>

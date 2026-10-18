@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { clockTime, dayLabel, hm } from "@/lib/format";
+import { addDays, monthRange, ukMonday, ukToday } from "@/lib/uk-date";
 
 type Row = {
   id: number;
@@ -16,18 +17,6 @@ type Row = {
 };
 type Totals = { net_seconds: number; overtime_seconds: number; break_seconds: number; days_worked: number; late_count: number };
 
-function monthRange(d = new Date()) {
-  const from = new Date(d.getFullYear(), d.getMonth(), 1);
-  const to = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  return [from.toISOString().slice(0, 10), to.toISOString().slice(0, 10)] as const;
-}
-function weekRange(d = new Date()) {
-  const mon = new Date(d);
-  mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
-  const sun = new Date(mon);
-  sun.setDate(sun.getDate() + 6);
-  return [mon.toISOString().slice(0, 10), sun.toISOString().slice(0, 10)] as const;
-}
 
 export default function MyAttendance() {
   const [mode, setMode] = useState<"week" | "month">("week");
@@ -36,10 +25,9 @@ export default function MyAttendance() {
   const [totals, setTotals] = useState<Totals | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const base = new Date();
-  if (mode === "week") base.setDate(base.getDate() + offset * 7);
-  else base.setMonth(base.getMonth() + offset);
-  const [from, to] = mode === "week" ? weekRange(base) : monthRange(base);
+  // UK dates, moved `offset` weeks or months from today.
+  const monday = addDays(ukMonday(), offset * 7);
+  const [from, to] = mode === "week" ? [monday, addDays(monday, 6)] : monthRange(ukToday(), offset);
   const label =
     mode === "week"
       ? `${new Date(from + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${new Date(to + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`

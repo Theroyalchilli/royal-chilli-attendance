@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { hm, decimalHours, roundedShiftSeconds, clockTime, dayLabel } from "@/lib/format";
+import { addDays, ukMonday } from "@/lib/uk-date";
 
 type Totals = { net_seconds: number; regular_seconds: number; overtime_seconds: number; break_seconds: number; late_seconds: number; days_worked: number };
 type Sheet = { id: number; status: string; locked: boolean; totals: Totals | null };
@@ -15,21 +16,11 @@ type Item = {
   sheet: Sheet | null;
 };
 
-function isoWeekStart(d = new Date()) {
-  const x = new Date(d);
-  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
-  return x.toISOString().slice(0, 10);
-}
-function addDays(iso: string, n: number) {
-  const d = new Date(iso + "T12:00:00Z");
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
 
 const STATUS_LABEL: Record<string, string> = { draft: "Draft", submitted: "Submitted", approved: "Approved", rejected: "Rejected", locked: "Locked 🔒" };
 
 export default function TimesheetsPage() {
-  const [weekStart, setWeekStart] = useState(isoWeekStart(new Date(Date.now() - 7 * 864e5)));
+  const [weekStart, setWeekStart] = useState(addDays(ukMonday(), -7));
   const weekEnd = addDays(weekStart, 6);
   const [list, setList] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { hm, dayLabel, clockTime } from "@/lib/format";
 import { confirmDelete } from "@/components/ui/confirm";
 import { ROLE_LABEL } from "@/lib/roles";
+import { ukToday as todayISO } from "@/lib/uk-date";
 
 type Staff = {
   id: number;
@@ -74,9 +75,6 @@ function groupByDay(rows: Row[]): [string, Row[]][] {
   return [...m.entries()];
 }
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 function addDays(iso: string, n: number) {
   const x = new Date(iso + "T12:00:00Z");
   x.setUTCDate(x.getUTCDate() + n);
