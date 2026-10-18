@@ -12,10 +12,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!session) redirect("/login");
   if (!canManageAttendance(session.role)) redirect("/me");
 
-  const approvals = isOwnPagesOnly(session.role) ? 0 : await pendingApprovals(session.businessId).catch(() => 0);
+  const [approvals, business] = await Promise.all([
+    isOwnPagesOnly(session.role) ? 0 : pendingApprovals(session.businessId).catch(() => 0),
+    headerBusiness(session),
+  ]);
 
   return (
-    <Shell user={session} nav={navFor(session.role)} approvals={approvals} business={await headerBusiness(session)}>
+    <Shell user={session} nav={navFor(session.role)} approvals={approvals} business={business}>
       {children}
     </Shell>
   );
