@@ -3,6 +3,8 @@
   "crons": [
     { "path": "/api/cron/missing-clockouts", "schedule": "0 4 * * *" },
     { "path": "/api/cron/purge-photos", "schedule": "30 4 * * *" },
-    { "path": "/api/cron/purge-notifications", "schedule": "0 5 * * *" }
+    { "path": "/api/cron/purge-notifications", "schedule": "0 5 * * *" },
+    { "path": "/api/cron/rota-reminder?stage=first", "schedule": "0 12 * * 5" },
+    { "path": "/api/cron/rota-reminder?stage=final", "schedule": "0 18 * * 0" }
   ]
 }

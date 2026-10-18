@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { confirmDelete } from "@/components/ui/confirm";
-import { ukMonday, ukToday } from "@/lib/uk-date";
+import { mondayOf, ukMonday, ukToday } from "@/lib/uk-date";
 
 type Staff = {
   id: number;
@@ -29,6 +29,11 @@ const todayIso = () => ukToday();
 
 export default function RotaPage() {
   const [weekStart, setWeekStart] = useState(ukMonday());
+  // ?week=<Monday> (the "rota isn't done" reminder) opens that week.
+  useEffect(() => {
+    const w = new URLSearchParams(window.location.search).get("week");
+    if (w && /^\d{4}-\d{2}-\d{2}$/.test(w) && w === mondayOf(w)) setWeekStart(w);
+  }, []);
   const [days, setDays] = useState<string[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
