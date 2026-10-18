@@ -13,14 +13,14 @@ export const dynamic = "force-dynamic";
 // Usual patterns for the modal's defaults. Falls back to the single-slot
 // columns until POS migration 066 (rota_start_2/rota_end_2) has been run.
 // Staff who work at this business and go on the rota (not Super admin or
-// HR — lib/roles.ts).
+// HR — lib/roles.ts — and not anyone with "Show on the Rota" unticked).
 async function loadActiveStaffRotas(businessId: number) {
   const here = await staffIdsAt(businessId);
   const cols = "id, name, rota_start, rota_end, rota_working_days";
   const notOnRota = `(${NOT_ON_ROTA.join(",")})`;
-  const r = await supabase.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1).in("id", here).not("role", "in", notOnRota).order("name");
+  const r = await supabase.from("staff").select(`${cols}, rota_start_2, rota_end_2`).eq("active", 1).eq("on_rota", true).in("id", here).not("role", "in", notOnRota).order("name");
   if (!r.error) return r;
-  return supabase.from("staff").select(cols).eq("active", 1).in("id", here).not("role", "in", notOnRota).order("name");
+  return supabase.from("staff").select(cols).eq("active", 1).eq("on_rota", true).in("id", here).not("role", "in", notOnRota).order("name");
 }
 
 function weekDays(weekStart: string): string[] {
@@ -92,9 +92,12 @@ export async function POST(req: NextRequest) {
   const b = await req.json();
   const id = b.id ? Number(b.id) : null;
   const staffId = Number(b.staff_id);
-  const { data: person } = await supabase.from("staff").select("role").eq("id", staffId).maybeSingle();
+  const { data: person } = await supabase.from("staff").select("role, on_rota").eq("id", staffId).maybeSingle();
   if (person && !isOnRota(person.role)) {
     return NextResponse.json({ error: "Super admins and HR don't go on the rota" }, { status: 400 });
+  }
+  if (person && person.on_rota === false) {
+    return NextResponse.json({ error: "They're set not to show on the Rota (Employees → Usual rota)" }, { status: 400 });
   }
   const date = String(b.shift_date || "");
   const start = String(b.start_time || "");

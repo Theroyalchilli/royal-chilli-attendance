@@ -21,6 +21,7 @@ type Staff = {
   rota_end_2?: string | null;
   rota_working_days: number[] | null;
   rota_break_minutes: number | null;
+  on_rota?: boolean;
   rota_grace_minutes: number | null;
 };
 type Row = {
@@ -170,7 +171,8 @@ export default function EmployeeProfilePage() {
             ? `Usual rota: ${staff.rota_start.slice(0, 5)}–${staff.rota_end.slice(0, 5)}${
                 staff.rota_start_2 && staff.rota_end_2 ? ` & ${staff.rota_start_2.slice(0, 5)}–${staff.rota_end_2.slice(0, 5)}` : ""
               } · ${(staff.rota_working_days ?? []).map((i) => DAYS[i - 1]).join(" ")}`
-            : "No usual rota set"}{" "}
+            : "No usual rota set"}
+          {staff.on_rota === false && <span className="ml-1 rounded bg-neutral-100 px-1.5 py-0.5 text-neutral-600">Not on the Rota</span>}{" "}
           <button onClick={() => setEditingRota(true)} className="text-blue-600 hover:underline">Edit</button>
         </p>
       </div>
@@ -523,6 +525,7 @@ function UsualRotaModal({ staff, onClose, onSaved }: { staff: Staff; onClose: ()
   const [end2, setEnd2] = useState(t(staff.rota_end_2) || "00:00");
   const [days, setDays] = useState<number[]>(staff.rota_working_days ?? [1, 2, 3, 4, 5]);
   const [breakMin, setBreakMin] = useState(String(staff.rota_break_minutes ?? 0));
+  const [onRota, setOnRota] = useState(staff.on_rota !== false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -536,6 +539,7 @@ function UsualRotaModal({ staff, onClose, onSaved }: { staff: Staff; onClose: ()
       rota_end: end || null,
       rota_working_days: days,
       rota_break_minutes: Number(breakMin) || 0,
+      on_rota: onRota,
     };
     // only touch the second-slot columns when they're in use or being cleared
     if (split || staff.rota_start_2 || staff.rota_end_2) {
@@ -561,6 +565,13 @@ function UsualRotaModal({ staff, onClose, onSaved }: { staff: Staff; onClose: ()
       <div className="w-full max-w-md rounded-2xl bg-white p-5">
         <h2 className="font-semibold">Usual rota — {staff.name}</h2>
         <p className="mt-1 text-xs text-neutral-500">Used by &ldquo;Fill from defaults&rdquo; on the Rota page, and on days with no shift set.</p>
+        <label className="mt-4 flex items-start gap-2 rounded-lg bg-neutral-50 px-3 py-2 text-sm">
+          <input type="checkbox" checked={onRota} onChange={(e) => setOnRota(e.target.checked)} className="mt-0.5" />
+          <span>
+            Show on the Rota
+            <span className="block text-xs text-neutral-500">Untick for someone who isn&apos;t scheduled (e.g. a manager). They can still clock in and out.</span>
+          </span>
+        </label>
         <div className="mt-4 grid grid-cols-2 gap-3">
           <label className="text-xs text-neutral-500">{split ? "Shift 1 start" : "Start"}<input type="time" value={start} onChange={(e) => setStart(e.target.value)} className={input} /></label>
           <label className="text-xs text-neutral-500">{split ? "Shift 1 end" : "End"}<input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className={input} /></label>
