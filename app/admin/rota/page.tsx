@@ -130,10 +130,12 @@ export default function RotaPage() {
         <p className="mt-8 text-sm text-neutral-400">Loading…</p>
       ) : (
         <div className="mt-4 overflow-x-auto rounded-xl border border-neutral-200">
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-neutral-50 text-xs text-neutral-500">
               <tr>
-                <th className="sticky left-0 z-10 bg-neutral-50 px-3 py-2 text-left shadow-[1px_0_0_#e5e5e5]">Staff</th>
+                {/* w-px: the Staff column is only as wide as the names, so on a phone the
+                    spare width goes to the days instead of empty space. */}
+                <th className="sticky left-0 z-10 w-px whitespace-nowrap bg-neutral-50 px-3 py-2 text-left shadow-[1px_0_0_#e5e5e5]">Staff</th>
                 {days.map((d, i) => (
                   <th key={d} className="px-2 py-2 text-center">
                     {DOW[i]}<br />
@@ -146,7 +148,9 @@ export default function RotaPage() {
             <tbody>
               {staff.map((s) => (
                 <tr key={s.id} className="border-t border-neutral-100">
-                  <td className="sticky left-0 z-10 max-w-[140px] truncate bg-white px-3 py-2 font-medium shadow-[1px_0_0_#e5e5e5]" title={s.name}>{s.name}</td>
+                  <td className="sticky left-0 z-10 w-px bg-white px-3 py-2 font-medium shadow-[1px_0_0_#e5e5e5]" title={s.name}>
+                    <div className="max-w-[120px] truncate">{s.name}</div>
+                  </td>
                   {days.map((date) => {
                     const day = shiftsAt.get(`${s.id}:${date}`) ?? [];
                     const lv = onLeave(s.id, date);
