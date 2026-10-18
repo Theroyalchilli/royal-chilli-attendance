@@ -55,7 +55,7 @@ export default function ClockButton() {
       const res = await fetch("/api/me/punch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photo, face, lat: pos?.lat, lng: pos?.lng }),
+        body: JSON.stringify({ photo, face, lat: pos?.lat, lng: pos?.lng, accuracy: pos?.accuracy }),
       });
       const data = await res.json();
       if (!res.ok) {
