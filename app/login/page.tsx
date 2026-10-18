@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isOwnPagesOnly } from "@/lib/roles";
 import { freshStart } from "@/lib/auth-sync";
+import { PasswordInput } from "@/components/ui/password-input";
 
 const dest = (role: string) => (isOwnPagesOnly(role) ? "/me" : "/admin");
 
@@ -81,12 +82,12 @@ export default function LoginPage() {
           className="mt-5 w-full rounded-lg border border-neutral-300 px-3 py-2.5 outline-none focus:border-brand"
           required
         />
-        <input
+        <PasswordInput
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          type="password"
           placeholder="Password"
-          className="mt-3 w-full rounded-lg border border-neutral-300 px-3 py-2.5 outline-none focus:border-brand"
+          wrapperClassName="mt-3"
+          className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 outline-none focus:border-brand"
           required
         />
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export default function ChangePasswordModal({ onClose }: { onClose: () => void }) {
   const [current, setCurrent] = useState("");
@@ -30,29 +31,26 @@ export default function ChangePasswordModal({ onClose }: { onClose: () => void }
       <div className="w-full max-w-sm rounded-2xl bg-white p-5">
         <h2 className="font-semibold">Change password</h2>
 
-        <label className="mt-4 block text-xs text-neutral-500">Current password</label>
-        <input
-          type="password"
+        <label className="mt-4 mb-1 block text-xs text-neutral-500">Current password</label>
+        <PasswordInput
           value={current}
           onChange={(e) => setCurrent(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
         />
 
-        <label className="mt-3 block text-xs text-neutral-500">New password</label>
-        <input
-          type="password"
+        <label className="mt-3 mb-1 block text-xs text-neutral-500">New password</label>
+        <PasswordInput
           value={next}
           onChange={(e) => setNext(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
         />
 
-        <label className="mt-3 block text-xs text-neutral-500">Confirm new password</label>
-        <input
-          type="password"
+        <label className="mt-3 mb-1 block text-xs text-neutral-500">Confirm new password</label>
+        <PasswordInput
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit()}
-          className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
         />
 
         {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
