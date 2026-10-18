@@ -7,7 +7,7 @@ import { recompute, audit } from "@/lib/attendance-write";
 import { notify, notifyManagers } from "@/lib/notify";
 import type { AttendanceSettings } from "@/lib/settings";
 import { storeClockPhoto } from "@/lib/photo";
-import { checkGeofence } from "@/lib/geofence";
+import { checkGeofence, formatDistance } from "@/lib/geofence";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
 
 // face: the phone saw a face before taking the photo (true), or it
 // couldn't check and the person tapped "Take photo" (false).
-type Body = { photo?: string | null; face?: boolean | null; lat?: number; lng?: number };
+type Body = { photo?: string | null; face?: boolean | null; lat?: number; lng?: number; accuracy?: number };
 
 // POST — clock in or out for the signed-in person, from their own device.
 export async function POST(req: NextRequest) {
@@ -72,13 +72,16 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as Body;
     const lat = typeof body.lat === "number" ? body.lat : null;
     const lng = typeof body.lng === "number" ? body.lng : null;
+    const accuracy = typeof body.accuracy === "number" ? body.accuracy : null;
 
-    const geo = await checkGeofence(session.businessId, lat, lng);
+    const geo = await checkGeofence(session.businessId, lat, lng, accuracy);
     if (!geo.ok) {
       const msg =
         geo.reason === "no_location"
           ? "Turn on location so we can check you're at the restaurant. Ask a manager if this is wrong."
-          : `You're ${geo.distance}m away — you need to be within ${geo.radius}m of the restaurant. Ask a manager if this is wrong.`;
+          : geo.reason === "rough_location"
+            ? `Your phone could only find a rough location (within ${formatDistance(geo.accuracy!)}). Turn on Precise Location for this browser, step near a window and try again. Ask a manager if this is wrong.`
+            : `You're ${formatDistance(geo.distance!)} away — you need to be within ${geo.radius}m of the restaurant. Ask a manager if this is wrong.`;
       return NextResponse.json({ error: msg }, { status: 403 });
     }
 
