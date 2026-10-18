@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { ukMonday } from "@/lib/uk-date";
 
 type Shift = { shift_date: string; start_time: string; end_time: string };
 type Rota = {
@@ -23,11 +24,6 @@ function mins(start: string, end: string) {
 }
 const dur = (m: number) => `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}`;
 
-function mondayOf(d = new Date()) {
-  const x = new Date(d);
-  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
-  return x.toISOString().slice(0, 10);
-}
 function shiftWeek(iso: string, w: number) {
   const d = new Date(iso + "T12:00:00Z");
   d.setUTCDate(d.getUTCDate() + w * 7);
@@ -35,7 +31,7 @@ function shiftWeek(iso: string, w: number) {
 }
 
 export default function MyRota() {
-  const [weekStart, setWeekStart] = useState(mondayOf());
+  const [weekStart, setWeekStart] = useState(ukMonday());
   const [days, setDays] = useState<string[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [rota, setRota] = useState<Rota>(null);
@@ -78,7 +74,7 @@ export default function MyRota() {
           {days[6] && new Date(days[6] + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
         </span>
         <button onClick={() => setWeekStart(shiftWeek(weekStart, 1))} className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5">→</button>
-        <button onClick={() => setWeekStart(mondayOf())} className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-xs">This week</button>
+        <button onClick={() => setWeekStart(ukMonday())} className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-xs">This week</button>
       </div>
 
       {loading ? (

@@ -3,20 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { clockTime, hm } from "@/lib/format";
 import { SHIFT_STATUS_BADGE, SHIFT_STATUS_LABEL, type ShiftStatus } from "@/lib/shift-status";
+import { addDays, ukMonday, ukToday as todayISO } from "@/lib/uk-date";
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-function isoWeekStart(d = new Date()) {
-  const x = new Date(d);
-  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
-  return x.toISOString().slice(0, 10);
-}
-function addDays(iso: string, n: number) {
-  const d = new Date(iso + "T12:00:00Z");
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
 
 type AttRow = {
   staff_id: number; staff_name: string; work_date: string;
@@ -32,8 +20,8 @@ type RangeRow = { staff_id: string; name: string; netSeconds: number };
 
 export default function ReportsPage() {
   const [tab, setTab] = useState<"today" | "range">("today");
-  const [from, setFrom] = useState(isoWeekStart());
-  const [to, setTo] = useState(addDays(isoWeekStart(), 6));
+  const [from, setFrom] = useState(ukMonday());
+  const [to, setTo] = useState(addDays(ukMonday(), 6));
   const [staff, setStaff] = useState<{ id: number; name: string }[]>([]);
   const [staffId, setStaffId] = useState("");
 

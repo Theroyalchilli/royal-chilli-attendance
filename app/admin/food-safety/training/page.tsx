@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { ukToday } from "@/lib/uk-date";
 
 type Course = { id: number; name: string; refresh_months: number; has_level: boolean };
 type TrainingRecord = { id: number; level: string | null; date_done: string; trainer: string | null; certificate_ref: string | null } | null;
@@ -30,7 +31,7 @@ export default function TeamTrainingPage() {
   const [canRecord, setCanRecord] = useState(false);
   const [open, setOpen] = useState<number | null>(null);
   const [form, setForm] = useState<{ course_id: string; level: string; date_done: string; trainer: string }>({
-    course_id: "", level: "", date_done: new Date().toISOString().slice(0, 10), trainer: "",
+    course_id: "", level: "", date_done: ukToday(), trainer: "",
   });
   const [certificate, setCertificate] = useState<{ name: string; dataUrl: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -74,7 +75,7 @@ export default function TeamTrainingPage() {
     const data = await res.json();
     setBusy(false);
     if (!res.ok) { setError(data.error || "Failed to save"); return; }
-    setForm({ course_id: "", level: "", date_done: new Date().toISOString().slice(0, 10), trainer: "" });
+    setForm({ course_id: "", level: "", date_done: ukToday(), trainer: "" });
     setCertificate(null);
     setOpen(null);
     load();

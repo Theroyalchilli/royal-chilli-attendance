@@ -7,6 +7,7 @@ import { hm, decimalHours } from "@/lib/format";
 import ClockButton from "@/components/me/ClockButton";
 import PushPrompt from "@/components/PushPrompt";
 import ManagerMessageBanner from "@/components/ManagerMessageBanner";
+import { addDays, ukMonday, ukToday } from "@/lib/uk-date";
 
 const DOW_LETTER = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -20,17 +21,8 @@ function greeting() {
   return "Good evening";
 }
 
-function addDays(iso: string, n: number) {
-  const d = new Date(iso + "T12:00:00Z");
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
-
 function thisWeek() {
-  const now = new Date();
-  const mon = new Date(now);
-  mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
-  const monday = mon.toISOString().slice(0, 10);
+  const monday = ukMonday();
   return {
     monday,
     days: Array.from({ length: 7 }, (_, i) => addDays(monday, i)),
@@ -95,7 +87,7 @@ export default function MeDashboard() {
   useEffect(() => {
     const load = async () => {
       const { monday, days, from, to } = thisWeek();
-      const todayIso = new Date().toISOString().slice(0, 10);
+      const todayIso = ukToday();
 
       const [me, rota, att, corr] = await Promise.all([
         fetch("/api/auth/me").then((r) => r.json()).catch(() => null),
