@@ -10,6 +10,7 @@ export type NotifType =
   | "leave_submitted"
   | "leave_reviewed"
   | "rota_ready"
+  | "rota_missing"
   | "shift_changed"
   | "shift_reminder"
   | "not_clocked_in"

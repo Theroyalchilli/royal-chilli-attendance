@@ -12,6 +12,7 @@ export const KINDS: Record<string, Kind> = {
   clock_out_reminder: { icon: "🕐", group: "shift", title: "Forgot to clock out?", tint: "bg-orange-50" },
   missed_clockout: { icon: "🕐", group: "shift", title: "Forgotten clock-out", tint: "bg-orange-50" },
   rota_ready: { icon: "📅", group: "shift", title: "Your rota is ready", tint: "bg-blue-50" },
+  rota_missing: { icon: "📅", group: "shift", title: "Next week's rota isn't done", tint: "bg-amber-50" },
   shift_changed: { icon: "✏️", group: "shift", title: "Your shift changed", tint: "bg-violet-50" },
   leave_submitted: { icon: "🌴", group: "request", title: "New leave request", tint: "bg-emerald-50" },
   leave_reviewed: { icon: "🌴", group: "request", title: "Leave update", tint: "bg-emerald-50" },
