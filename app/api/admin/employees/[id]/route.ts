@@ -36,24 +36,28 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if ("res" in g) return g.res;
   const db = bizDb(g.session.businessId);
   const staffId = Number((await params).id);
-  if (!(await staffWorksAt(db, staffId))) return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
+  // These four don't depend on each other, so fetch them together.
+  const [worksHere, settings, { data: staff, error: staffErr }, second] = await Promise.all([
+    staffWorksAt(db, staffId),
+    getAttendanceSettings(g.session.businessId),
+    db
+      .from("staff")
+      .select(
+        "id, name, role, employee_number, employment_type, pay_rate, active, rota_start, rota_end, rota_working_days, rota_break_minutes, rota_grace_minutes",
+      )
+      .eq("id", staffId)
+      .maybeSingle(),
+    // split-shift second slot (POS migration 066) — skipped if not migrated yet
+    db.from("staff").select("rota_start_2, rota_end_2").eq("id", staffId).maybeSingle(),
+  ]);
+  if (!worksHere) return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
 
-  const settings = await getAttendanceSettings(g.session.businessId);
   const { searchParams } = new URL(req.url);
   const range = searchParams.get("range") ?? "week";
   const anchor = searchParams.get("date") || localDateString(new Date(), settings.timezone);
   const { from, to } = rangeFor(range, anchor);
 
-  const { data: staff, error: staffErr } = await db
-    .from("staff")
-    .select(
-      "id, name, role, employee_number, employment_type, pay_rate, active, rota_start, rota_end, rota_working_days, rota_break_minutes, rota_grace_minutes",
-    )
-    .eq("id", staffId)
-    .maybeSingle();
   if (staffErr || !staff) return NextResponse.json({ error: "Employee not found" }, { status: 404 });
-  // split-shift second slot (POS migration 066) — skipped if not migrated yet
-  const second = await db.from("staff").select("rota_start_2, rota_end_2").eq("id", staffId).maybeSingle();
   if (!second.error && second.data) Object.assign(staff, second.data);
 
   const [{ data: attendance }, { data: shifts }, { data: corrections }, { data: leave }] =
