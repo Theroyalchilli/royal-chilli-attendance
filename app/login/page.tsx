@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { isOwnPagesOnly } from "@/lib/roles";
+import { canManageAttendance } from "@/lib/permissions";
+import type { StaffRole } from "@/lib/types";
 import { freshStart } from "@/lib/auth-sync";
 import { PasswordInput } from "@/components/ui/password-input";
 
-const dest = (role: string) => (isOwnPagesOnly(role) ? "/me" : "/admin");
+// Only roles that can open /admin go there (anyone else would get "No access").
+const dest = (role: string) => (canManageAttendance(role as StaffRole) ? "/admin" : "/me");
 
 export default function LoginPage() {
   const router = useRouter();

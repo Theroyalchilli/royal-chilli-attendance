@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ukToday } from "@/lib/uk-date";
+import { InlineLoading } from "@/components/StatusPage";
 
 type Course = { id: number; name: string; refresh_months: number; has_level: boolean };
 type TrainingRecord = { id: number; level: string | null; date_done: string; trainer: string | null; certificate_ref: string | null } | null;
@@ -88,7 +89,7 @@ export default function TeamTrainingPage() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {team === null ? (
-        <p className="mt-8 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : (
         <div className="mt-4 space-y-2">
           {team.map(({ staff, items }) => (

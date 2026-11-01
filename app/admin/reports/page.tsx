@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { clockTime, hm } from "@/lib/format";
 import { SHIFT_STATUS_BADGE, SHIFT_STATUS_LABEL, type ShiftStatus } from "@/lib/shift-status";
 import { addDays, ukMonday, ukToday as todayISO } from "@/lib/uk-date";
+import EmptyState from "@/components/EmptyState";
+import { InlineLoading } from "@/components/StatusPage";
 
 
 type AttRow = {
@@ -115,10 +117,10 @@ export default function ReportsPage() {
       </div>
 
       {loading ? (
-        <p className="mt-8 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : tab === "today" ? (
         todayRows.length === 0 ? (
-          <p className="mt-8 text-sm text-neutral-400">No one's rota'd today.</p>
+          <EmptyState>No one's rota'd today.</EmptyState>
         ) : (
           <div className="mt-5 overflow-x-auto rounded-xl border border-neutral-200">
             <table className="w-full min-w-[520px] text-sm">
@@ -146,7 +148,7 @@ export default function ReportsPage() {
           </div>
         )
       ) : rangeRows.length === 0 ? (
-        <p className="mt-8 text-sm text-neutral-400">No data for this range.</p>
+        <EmptyState>No data for this range.</EmptyState>
       ) : (
         <div className="mt-5 overflow-x-auto rounded-xl border border-neutral-200">
           <table className="w-full min-w-[480px] text-sm">

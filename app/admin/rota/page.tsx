@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { confirmDelete } from "@/components/ui/confirm";
 import { mondayOf, ukMonday, ukToday } from "@/lib/uk-date";
+import { InlineLoading } from "@/components/StatusPage";
 
 type Staff = {
   id: number;
@@ -132,7 +133,7 @@ export default function RotaPage() {
       </p>
 
       {loading ? (
-        <p className="mt-8 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : (
         <div className="mt-4 overflow-x-auto rounded-xl border border-neutral-200">
           <table className="w-full min-w-[640px] text-sm">

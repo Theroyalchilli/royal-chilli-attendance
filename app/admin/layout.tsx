@@ -10,7 +10,7 @@ import { isOwnPagesOnly } from "@/lib/roles";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!canManageAttendance(session.role)) redirect("/me");
+  if (!canManageAttendance(session.role)) redirect("/no-access");
 
   const [approvals, business] = await Promise.all([
     isOwnPagesOnly(session.role) ? 0 : pendingApprovals(session.businessId).catch(() => 0),

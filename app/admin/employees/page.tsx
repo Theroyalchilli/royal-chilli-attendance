@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ROLE_LABEL } from "@/lib/roles";
+import EmptyState from "@/components/EmptyState";
+import { InlineLoading } from "@/components/StatusPage";
 
 type Employee = {
   id: number;
@@ -73,9 +75,9 @@ export default function EmployeesPage() {
       </div>
 
       {loading ? (
-        <p className="mt-8 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : employees.length === 0 ? (
-        <p className="mt-8 text-sm text-neutral-400">No one matches these filters.</p>
+        <EmptyState>No one matches these filters.</EmptyState>
       ) : (
         <div className="mt-4 space-y-1.5">
           {employees.map((e) => (

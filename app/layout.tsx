@@ -3,6 +3,9 @@ import { Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { ConfirmHost } from "@/components/ui/confirm";
 import AuthSync from "@/components/AuthSync";
+import PwaRegister from "@/components/PwaRegister";
+import OfflineBar from "@/components/OfflineBar";
+import { launchScreens } from "@/lib/launch-screens";
 import { headers } from "next/headers";
 import { businessForHost } from "@/lib/business";
 import { appUrl } from "@/lib/app-hosts";
@@ -39,7 +42,10 @@ const BASE_METADATA: Metadata = {
   robots: { index: false, follow: false },
   manifest: "/manifest.json",
   // iPhone: opens full-screen from the Home Screen — required for phone notifications
-  appleWebApp: { capable: true, title: "Attendance", statusBarStyle: "default" },
+  // startupImage: the iPhone's launch picture (logo + name) instead of a black screen (app/launch-screen).
+  appleWebApp: { capable: true, title: "Attendance", statusBarStyle: "default", startupImage: launchScreens },
+  // Next only writes the newer "mobile-web-app-capable"; older iOS needs this one for the launch picture.
+  other: { "apple-mobile-web-app-capable": "yes" },
   icons: {
     icon: [
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
@@ -59,7 +65,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={playfair.variable}>
-      <body className="min-h-full bg-cream text-ink antialiased">{children}<ConfirmHost /><AuthSync /></body>
+      <body className="min-h-full bg-cream text-ink antialiased"><PwaRegister /><OfflineBar />{children}<ConfirmHost /><AuthSync /></body>
     </html>
   );
 }
