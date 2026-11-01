@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { clockTime, dayLabel } from "@/lib/format";
+import EmptyState from "@/components/EmptyState";
+import { InlineLoading } from "@/components/StatusPage";
 
 const STATUS: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",
@@ -96,9 +98,9 @@ function CorrectionsTab() {
       </div>
 
       {loading ? (
-        <p className="mt-8 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : requests.length === 0 ? (
-        <p className="mt-8 text-sm text-neutral-400">No requests yet.</p>
+        <EmptyState>No requests yet.</EmptyState>
       ) : (
         <div className="mt-4 space-y-3">
           {requests.map((r) => (
@@ -264,9 +266,9 @@ function LeaveTab() {
       </div>
 
       {loading ? (
-        <p className="mt-8 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : requests.length === 0 ? (
-        <p className="mt-8 text-sm text-neutral-400">No requests yet.</p>
+        <EmptyState>No requests yet.</EmptyState>
       ) : (
         <div className="mt-4 space-y-3">
           {requests.map((r) => (

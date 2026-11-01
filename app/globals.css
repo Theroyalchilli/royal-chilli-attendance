@@ -29,3 +29,9 @@ body {
   user-select: none;
   -webkit-touch-callout: none;
 }
+
+/* Loading bar (components/StatusPage.tsx LoadingScreen): a short bar sliding across. */
+@keyframes hub-load {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}

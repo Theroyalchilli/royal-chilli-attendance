@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ukMonday } from "@/lib/uk-date";
+import { InlineLoading } from "@/components/StatusPage";
 
 type Shift = { shift_date: string; start_time: string; end_time: string };
 type Rota = {
@@ -78,7 +79,7 @@ export default function MyRota() {
       </div>
 
       {loading ? (
-        <p className="mt-8 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : (
         <div className="mt-4 divide-y divide-neutral-100 rounded-xl border border-neutral-200 bg-white">
           {days.map((date, i) => {

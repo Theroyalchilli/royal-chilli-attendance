@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { InlineLoading } from "@/components/StatusPage";
 
 type Course = { id: number; name: string; refresh_months: number; has_level: boolean };
 type TrainingRecord = { id: number; course_id: number; level: string | null; date_done: string; trainer: string | null; certificate_ref: string | null } | null;
@@ -42,7 +43,7 @@ export default function MyTraining() {
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
       {items === null ? (
-        <p className="mt-8 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : (
         <div className="mt-5 space-y-2">
           {items.map(({ course, record, status, due_date }) => {

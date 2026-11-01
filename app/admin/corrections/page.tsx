@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { dayLabel } from "@/lib/format";
+import EmptyState from "@/components/EmptyState";
+import { InlineLoading } from "@/components/StatusPage";
 
 type Corr = {
   id: number;
@@ -64,9 +66,9 @@ export default function CorrectionsPage() {
       {message && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">{message}</p>}
 
       {loading ? (
-        <p className="mt-8 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : rows.length === 0 ? (
-        <p className="mt-8 text-sm text-neutral-400">Nothing here.</p>
+        <EmptyState>Nothing here.</EmptyState>
       ) : (
         <div className="mt-5 space-y-3">
           {rows.map((c) => (

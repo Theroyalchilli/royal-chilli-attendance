@@ -14,12 +14,14 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
   const btn = { flex: 1, padding: "12px 16px", borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: "pointer" } as const;
   return (
     <html lang="en">
-      <body style={{ margin: 0, background: "#fafaf9", color: "#1c1917", fontFamily: "Arial, Helvetica, sans-serif" }}>
+      <body style={{ margin: 0, background: "#FAF7F2", color: "#1c1917", fontFamily: "Arial, Helvetica, sans-serif" }}>
         <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>
           {reloading ? (
             <p style={{ fontSize: 14, color: "#78716c" }}>Updating to the latest version…</p>
           ) : (
             <div style={{ maxWidth: 360 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand-logo" alt="" width={88} height={88} style={{ borderRadius: 20, objectFit: "cover", marginBottom: 20 }} />
               <h1 style={{ fontSize: 24, margin: "0 0 10px" }}>Something went wrong 🌶️</h1>
               <p style={{ fontSize: 14, color: "#78716c", margin: 0 }}>We&apos;re sorry — this page couldn&apos;t be loaded properly.</p>
               <p style={{ fontSize: 14, color: "#78716c", margin: "8px 0 0" }}>Please try again. If the problem continues, return to the homepage and try again in a moment.</p>

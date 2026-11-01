@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { dayLabel } from "@/lib/format";
 import { confirmDialog } from "@/components/ui/confirm";
+import EmptyState from "@/components/EmptyState";
+import { InlineLoading } from "@/components/StatusPage";
 
 type Leave = {
   id: number;
@@ -63,9 +65,9 @@ export default function AdminLeavePage() {
       </div>
 
       {loading ? (
-        <p className="mt-8 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : rows.length === 0 ? (
-        <p className="mt-8 text-sm text-neutral-400">Nothing here.</p>
+        <EmptyState>Nothing here.</EmptyState>
       ) : (
         <div className="mt-5 space-y-3">
           {rows.map((r) => (

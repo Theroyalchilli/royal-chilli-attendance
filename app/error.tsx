@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { reloadOnceForStaleVersion } from "@/lib/chunk-error";
+import StatusPage from "@/components/StatusPage";
 
 // Any page that crashes lands here instead of the bare "Application error"
 // text. A page open from before a new version went live reloads itself once.
@@ -22,26 +23,16 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
   // "home" = the start of their own area
   const home = pathname.startsWith("/admin") ? "/admin" : pathname.startsWith("/me") ? "/me" : "/";
   return (
-    <div className="mx-auto grid min-h-[60vh] max-w-sm place-items-center px-6 text-center">
-      <div>
-        <h1 className="text-2xl font-semibold">Something went wrong 🌶️</h1>
-        <p className="mt-2 text-sm text-neutral-500">We&apos;re sorry — this page couldn&apos;t be loaded properly.</p>
-        <p className="mt-2 text-sm text-neutral-500">Please try again. If the problem continues, return to the homepage and try again in a moment.</p>
-        <div className="mt-5 grid grid-cols-2 gap-2">
-          <button
-            onClick={() => {
-              reset();
-              window.location.reload();
-            }}
-            className="rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-dark"
-          >
-            Try Again
-          </button>
-          <a href={home} className="rounded-xl border border-neutral-300 px-4 py-3 text-sm font-semibold">Back to Home</a>
-        </div>
-        <p className="mt-6 text-xs text-neutral-500">If you still need help, please ask your manager.</p>
-        {error.digest && <p className="mt-3 text-[11px] text-neutral-400">Error ref: {error.digest}</p>}
-      </div>
-    </div>
+    <StatusPage
+      icon="⚠️"
+      title="Something went wrong"
+      lines={["Sorry, this page couldn't be loaded properly.", "Please try again. If it keeps happening, go back to the start and try again in a moment."]}
+      actions={[
+        { label: "Try again", onClick: () => { reset(); window.location.reload(); }, primary: true },
+        { label: "Back to start", href: home },
+      ]}
+      note="If you still need help, please ask your manager."
+      digest={error.digest}
+    />
   );
 }

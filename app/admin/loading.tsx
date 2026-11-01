@@ -1,5 +1,7 @@
-// Shown the moment a menu link is tapped, so the old page doesn't just sit
-// there while the new one loads (and lets Next prefetch these pages).
+import { LoadingScreen } from "@/components/StatusPage";
+
+// Shown the moment a menu link is tapped (or the home-screen app starts,
+// straight after the iPhone's still launch picture): the logo with a moving bar.
 export default function Loading() {
-  return <p className="text-sm text-neutral-400">Loading…</p>;
+  return <LoadingScreen />;
 }

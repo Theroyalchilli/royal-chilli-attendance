@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { clockTime, dayLabel, hm } from "@/lib/format";
 import { addDays, monthRange, ukMonday, ukToday } from "@/lib/uk-date";
+import EmptyState from "@/components/EmptyState";
+import { InlineLoading } from "@/components/StatusPage";
 
 type Row = {
   id: number;
@@ -85,9 +87,9 @@ export default function MyAttendance() {
       )}
 
       {loading ? (
-        <p className="mt-8 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : rows.length === 0 ? (
-        <p className="mt-8 text-sm text-neutral-400">No clock-ins in this range.</p>
+        <EmptyState>No clock-ins in this range.</EmptyState>
       ) : (
         <div className="mt-4 overflow-hidden rounded-xl border border-neutral-200 bg-white">
           <table className="w-full text-sm">

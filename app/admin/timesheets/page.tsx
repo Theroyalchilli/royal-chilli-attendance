@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { hm, decimalHours, roundedShiftSeconds, clockTime, dayLabel } from "@/lib/format";
 import { addDays, ukMonday } from "@/lib/uk-date";
+import { InlineLoading } from "@/components/StatusPage";
 
 type Totals = { net_seconds: number; regular_seconds: number; overtime_seconds: number; break_seconds: number; late_seconds: number; days_worked: number };
 type Sheet = { id: number; status: string; locked: boolean; totals: Totals | null };
@@ -106,7 +107,7 @@ export default function TimesheetsPage() {
       </p>
 
       {loading ? (
-        <p className="mt-8 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : (
         <div className="mt-5 overflow-x-auto rounded-xl border border-neutral-200">
           <table className="w-full min-w-[640px] text-sm">

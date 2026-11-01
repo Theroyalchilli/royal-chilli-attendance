@@ -5,6 +5,8 @@ import { clockTime, dayLabel, hm } from "@/lib/format";
 import { SHIFT_STATUS_BADGE, SHIFT_STATUS_LABEL, type ShiftStatus } from "@/lib/shift-status";
 import { confirmDelete, confirmDialog } from "@/components/ui/confirm";
 import { shiftActions, LEAVE_TYPE_LABEL, ABSENT_AFTER_MINUTES, type ShiftAction, type ShiftLeaveType } from "@/lib/shift-actions";
+import EmptyState from "@/components/EmptyState";
+import { InlineLoading } from "@/components/StatusPage";
 
 type Row = {
   id: number;
@@ -302,9 +304,9 @@ export default function AttendancePage() {
       {statusError && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{statusError}</p>}
 
       {loading ? (
-        <p className="mt-8 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : allDates.length === 0 ? (
-        <p className="mt-8 text-sm text-neutral-400">No attendance in this range.</p>
+        <EmptyState>No attendance in this range.</EmptyState>
       ) : (
         <div className="mt-5 space-y-5">
           {allDates.map((date) => {

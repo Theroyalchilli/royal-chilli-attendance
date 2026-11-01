@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { InlineLoading } from "@/components/StatusPage";
 
 type StaffRef = { name: string } | null;
 type CheckLog = { id: number; ok: boolean; problem_note: string | null; created_at: string; check_type: { check_window: string; label: string } | null; staff: StaffRef };
@@ -63,7 +64,7 @@ export default function RecordsPage() {
       </div>
 
       {!data ? (
-        <p className="mt-8 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : (
         <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-6 print:mt-0 print:rounded-none print:border-0 print:p-0">
           <div className="border-b border-neutral-200 pb-4 print:border-black">
