@@ -2,11 +2,17 @@
 // offline page. Pages always come from the network (always the latest
 // version); only when there's no connection does a page tap show the saved
 // offline page (public/offline.html) with the business's logo and name.
-const CACHE = "offline-v1";
+const CACHE = "offline-v2";
 const SAVED = ["/offline.html", "/brand-logo", "/api/public/brand"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SAVED)).catch(() => {}).then(() => self.skipWaiting()));
+  // One by one: a business with no logo yet answers /brand-logo with a 404,
+  // which must not stop the offline page itself being saved.
+  event.waitUntil(
+    caches.open(CACHE)
+      .then((c) => Promise.all(SAVED.map((u) => fetch(u).then((r) => (r.ok ? c.put(u, r) : undefined)).catch(() => {}))))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener("activate", (event) => {
@@ -31,7 +37,12 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(url.pathname, copy)); }
+          // Keep the latest; a 404 (business without a logo) removes the old
+          // copy, so the offline page never shows another business's logo.
+          if (res.ok || res.status === 404) {
+            const copy = res.ok ? res.clone() : null;
+            caches.open(CACHE).then((c) => (copy ? c.put(url.pathname, copy) : c.delete(url.pathname)));
+          }
           return res;
         })
         .catch(() => caches.match(url.pathname).then((r) => r || Response.error())),

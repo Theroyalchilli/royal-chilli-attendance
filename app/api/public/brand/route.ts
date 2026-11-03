@@ -7,5 +7,5 @@ import { businessForHost, getBusiness } from "@/lib/business";
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req).catch(() => null);
   const b = session ? await getBusiness(session.businessId).catch(() => null) : await businessForHost(req.headers.get("host")).catch(() => null);
-  return NextResponse.json({ name: b?.name ?? "The Royal Chilli" }, { headers: { "Cache-Control": "private, max-age=300" } });
+  return NextResponse.json({ name: b?.name ?? "The Royal Chilli" }, { headers: { "Cache-Control": "private, no-cache" } });
 }
