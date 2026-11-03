@@ -2,7 +2,7 @@
 // offline page. Pages always come from the network (always the latest
 // version); only when there's no connection does a page tap show the saved
 // offline page (public/offline.html) with the business's logo and name.
-const CACHE = "offline-v2";
+const CACHE = "offline-v3";
 const SAVED = ["/offline.html", "/brand-logo", "/api/public/brand"];
 
 self.addEventListener("install", (event) => {
@@ -10,7 +10,7 @@ self.addEventListener("install", (event) => {
   // which must not stop the offline page itself being saved.
   event.waitUntil(
     caches.open(CACHE)
-      .then((c) => Promise.all(SAVED.map((u) => fetch(u).then((r) => (r.ok ? c.put(u, r) : undefined)).catch(() => {}))))
+      .then((c) => Promise.all(SAVED.map((u) => fetch(u, { cache: "no-store" }).then((r) => (r.ok ? c.put(u, r) : undefined)).catch(() => {}))))
       .then(() => self.skipWaiting()),
   );
 });
