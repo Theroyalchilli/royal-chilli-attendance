@@ -20,8 +20,8 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
             <p style={{ fontSize: 14, color: "#78716c" }}>Updating to the latest version…</p>
           ) : (
             <div style={{ maxWidth: 360 }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand-logo" alt="" width={88} height={88} style={{ borderRadius: 20, objectFit: "cover", marginBottom: 20 }} />
+              {/* The business's own logo; none yet → stays empty (app/brand-logo). */}
+              <div aria-hidden style={{ width: 88, height: 88, margin: "0 auto 20px", borderRadius: 20, background: "url(/brand-logo) center / cover no-repeat" }} />
               <h1 style={{ fontSize: 24, margin: "0 0 10px" }}>Something went wrong 🌶️</h1>
               <p style={{ fontSize: 14, color: "#78716c", margin: 0 }}>We&apos;re sorry — this page couldn&apos;t be loaded properly.</p>
               <p style={{ fontSize: 14, color: "#78716c", margin: "8px 0 0" }}>Please try again. If the problem continues, return to the homepage and try again in a moment.</p>

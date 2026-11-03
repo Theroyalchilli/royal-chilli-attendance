@@ -6,8 +6,10 @@
 export type StatusAction = { label: string; href?: string; onClick?: () => void; primary?: boolean };
 
 export function BrandLogo({ size = 88 }: { size?: number }) {
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src="/brand-logo" alt="" width={size} height={size} className="rounded-[22%] object-cover" style={{ width: size, height: size }} />;
+  // A background picture, not <img>: a business with no logo yet gets a 404
+  // from /brand-logo and this simply stays empty (no broken-picture icon,
+  // and never another business's logo).
+  return <div aria-hidden className="rounded-[22%] bg-cover bg-center bg-no-repeat" style={{ width: size, height: size, backgroundImage: "url(/brand-logo)" }} />;
 }
 
 export default function StatusPage({ icon, title, lines = [], actions = [], name, note, digest }: {
