@@ -9,7 +9,7 @@ export function BrandLogo({ size = 88 }: { size?: number }) {
   // A background picture, not <img>: a business with no logo yet gets a 404
   // from /brand-logo and this simply stays empty (no broken-picture icon,
   // and never another business's logo).
-  return <div aria-hidden className="rounded-[22%] bg-cover bg-center bg-no-repeat" style={{ width: size, height: size, backgroundImage: "url(/brand-logo)" }} />;
+  return <div aria-hidden className="rounded-[22%] bg-cover bg-center bg-no-repeat" style={{ width: size, height: size, backgroundImage: "url(/brand-logo?v=2)" }} />;
 }
 
 export default function StatusPage({ icon, title, lines = [], actions = [], name, note, digest }: {
