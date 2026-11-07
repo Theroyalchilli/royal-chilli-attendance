@@ -189,7 +189,7 @@ export default function NotificationBell() {
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
         {unread > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full border-2 border-white bg-brand px-1 text-[11px] font-bold leading-none text-white tabular-nums">
+          <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full border-2 border-white bg-brand px-1 text-[11px] font-bold leading-none text-brand-on tabular-nums">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -366,7 +366,7 @@ function SwipeRow({
         onPointerUp={end}
         onPointerCancel={end}
         style={{ transform: `translateX(${dx}px)`, touchAction: "pan-y" }}
-        className={`relative ${dragging ? "" : "transition-transform duration-200"} ${unread ? "bg-[#FCEDEA]" : "bg-cream"}`}
+        className={`relative ${dragging ? "" : "transition-transform duration-200"} ${unread ? "bg-brand-tint" : "bg-cream"}`}
       >
         <button
           onClick={() => !dragging && onOpen()}

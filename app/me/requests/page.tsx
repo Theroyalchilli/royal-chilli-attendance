@@ -92,7 +92,7 @@ function CorrectionsTab() {
   return (
     <div>
       <div className="flex justify-end">
-        <button onClick={() => setOpen(true)} className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark">
+        <button onClick={() => setOpen(true)} className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-brand-on hover:bg-brand-dark">
           Request a correction
         </button>
       </div>
@@ -211,7 +211,7 @@ function CorrectionModal({ recent, onClose, onDone }: { recent: Recent[]; onClos
 
         <div className="mt-5 flex gap-3">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
-          <button onClick={submit} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
+          <button onClick={submit} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">
             {busy ? "Submitting…" : "Submit"}
           </button>
         </div>
@@ -260,7 +260,7 @@ function LeaveTab() {
   return (
     <div>
       <div className="flex justify-end">
-        <button onClick={() => setOpen(true)} className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark">
+        <button onClick={() => setOpen(true)} className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-brand-on hover:bg-brand-dark">
           Request time off
         </button>
       </div>
@@ -346,7 +346,7 @@ function LeaveModal({ onClose, onDone }: { onClose: () => void; onDone: () => vo
 
         <div className="mt-5 flex gap-3">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
-          <button onClick={submit} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
+          <button onClick={submit} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">
             {busy ? "Submitting…" : "Submit"}
           </button>
         </div>

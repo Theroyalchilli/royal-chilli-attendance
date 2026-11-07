@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Brand colours: The Royal Chilli's, replaced per business by lib/business-theme.ts. */
+:root {
+  --brand-main: 227 68 53; --brand-deep: 200 45 29; --brand-on: 255 255 255;
+  --brand-accent: 227 68 53; --brand-on-accent: 255 255 255;
+  --brand-tint: 252 237 234; --brand-page: 255 251 235; --brand-line: 228 223 211;
+  --brand-cream: 246 241 230; --brand-wash: 250 247 242;
+}
+
 html,
 body {
   height: 100%;

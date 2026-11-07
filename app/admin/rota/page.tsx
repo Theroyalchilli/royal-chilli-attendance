@@ -122,7 +122,7 @@ export default function RotaPage() {
         {!weekIsPast && (
           <div className="ml-auto flex gap-2">
             <button onClick={() => generate("copy_previous")} disabled={busy} className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs disabled:opacity-50">Copy last week</button>
-            <button onClick={() => generate("defaults")} disabled={busy} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-50">Fill from defaults</button>
+            <button onClick={() => generate("defaults")} disabled={busy} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">Fill from defaults</button>
           </div>
         )}
       </div>
@@ -300,7 +300,7 @@ function ShiftModal({
               } else onDone();
             }}
             disabled={busy}
-            className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50"
+            className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50"
           >
             {busy ? "…" : "Save"}
           </button>

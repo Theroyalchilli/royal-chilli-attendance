@@ -147,7 +147,7 @@ export default function MessagesPage() {
                     else next.add(s.id);
                     setPicked(next);
                   }}
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${on ? "bg-brand text-white" : "bg-neutral-100 text-neutral-600"}`}
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${on ? "bg-brand text-brand-on" : "bg-neutral-100 text-neutral-600"}`}
                 >
                   {s.name}
                 </button>
@@ -186,7 +186,7 @@ export default function MessagesPage() {
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
         {done && <p className="mt-2 text-sm font-medium text-emerald-700">✓ {done}</p>}
 
-        <button onClick={send} disabled={busy} className="mt-4 w-full rounded-xl bg-brand py-3 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
+        <button onClick={send} disabled={busy} className="mt-4 w-full rounded-xl bg-brand py-3 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">
           {busy ? "Sending…" : later ? "Schedule message" : "Send now"}
         </button>
       </div>

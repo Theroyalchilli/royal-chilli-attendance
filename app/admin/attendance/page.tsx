@@ -255,7 +255,7 @@ export default function AttendancePage() {
     <div className="mx-auto max-w-4xl">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-lg font-semibold">Attendance</h1>
-        <button onClick={() => setAdding(true)} className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark">
+        <button onClick={() => setAdding(true)} className="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-brand-on hover:bg-brand-dark">
           + Manual entry
         </button>
       </div>
@@ -267,7 +267,7 @@ export default function AttendancePage() {
             <button
               key={r}
               onClick={() => setRange(r)}
-              className={`rounded-md px-3 py-1 capitalize ${range === r ? "bg-brand text-white" : "text-neutral-600"}`}
+              className={`rounded-md px-3 py-1 capitalize ${range === r ? "bg-brand text-brand-on" : "text-neutral-600"}`}
             >
               {r}
             </button>
@@ -640,7 +640,7 @@ function EditModal({ row, canEditLockedTimes, onClose, onSaved }: { row: Row; ca
           {row.approval_status === "pending" && (
             <button onClick={() => save({ approval_status: "approved" })} disabled={busy} className="rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white">Approve</button>
           )}
-          <button onClick={() => save()} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
+          <button onClick={() => save()} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">
             {busy ? "Saving…" : "Save"}
           </button>
         </div>
@@ -795,7 +795,7 @@ function ManualEntryModal({ staff, canEditLockedTimes, prefill, onEditExisting, 
         </div>
         <div className="flex shrink-0 gap-3 border-t border-neutral-100 bg-white px-5 py-4">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Close</button>
-          {showEntryForm && <button onClick={save} disabled={busy || existingLoading || existingLoadFailed || !staffId || (overlappingRows.length > 0 && !overlapConfirmed)} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">{busy ? "Saving…" : existingRows.length ? "Save additional session" : "Save entry"}</button>}
+          {showEntryForm && <button onClick={save} disabled={busy || existingLoading || existingLoadFailed || !staffId || (overlappingRows.length > 0 && !overlapConfirmed)} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">{busy ? "Saving…" : existingRows.length ? "Save additional session" : "Save entry"}</button>}
         </div>
       </div>
     </div>

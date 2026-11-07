@@ -9,6 +9,8 @@ import { launchScreens } from "@/lib/launch-screens";
 import { headers } from "next/headers";
 import { businessForHost } from "@/lib/business";
 import { appUrl } from "@/lib/app-hosts";
+import { getSession } from "@/lib/auth";
+import { businessThemeCss } from "@/lib/business-theme";
 
 // Same face used for "The Royal Chilli" on the customer account header —
 // keeps the two apps' branding consistent.
@@ -62,10 +64,19 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+// In the colours of the business signed in to, else the one on this address.
+// An unknown address keeps the standard colours, like its name.
+async function pageTheme(): Promise<string | null> {
+  const session = await getSession().catch(() => null);
+  const businessId = session?.businessId ?? (await businessForHost((await headers()).get("host")).catch(() => null))?.id;
+  return businessId ? businessThemeCss(businessId).catch(() => null) : null;
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const theme = await pageTheme();
   return (
     <html lang="en" className={playfair.variable}>
-      <body className="min-h-full bg-cream text-ink antialiased"><PwaRegister /><OfflineBar />{children}<ConfirmHost /><AuthSync /></body>
+      <body className="min-h-full bg-cream text-ink antialiased">{theme && <style dangerouslySetInnerHTML={{ __html: theme }} />}<PwaRegister /><OfflineBar />{children}<ConfirmHost /><AuthSync /></body>
     </html>
   );
 }

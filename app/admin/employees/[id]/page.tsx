@@ -184,7 +184,7 @@ export default function EmployeeProfilePage() {
             <button
               key={r}
               onClick={() => setRange(r)}
-              className={`rounded-md px-3 py-1 capitalize ${range === r ? "bg-brand text-white" : "text-neutral-600"}`}
+              className={`rounded-md px-3 py-1 capitalize ${range === r ? "bg-brand text-brand-on" : "text-neutral-600"}`}
             >
               {r}
             </button>
@@ -216,7 +216,7 @@ export default function EmployeeProfilePage() {
       <section className="mt-6">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500">Attendance</h2>
-          <button onClick={() => setAdding(true)} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark">
+          <button onClick={() => setAdding(true)} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-on hover:bg-brand-dark">
             + Manual entry
           </button>
         </div>
@@ -456,7 +456,7 @@ function AttendanceEditModal({ row, canEditLockedTimes, onClose, onSaved }: { ro
           {row.approval_status === "pending" && (
             <button onClick={() => save({ approval_status: "approved" })} disabled={busy} className="rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white">Approve</button>
           )}
-          <button onClick={() => save()} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
+          <button onClick={() => save()} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">
             {busy ? "Saving…" : "Save"}
           </button>
         </div>
@@ -507,7 +507,7 @@ function ManualEntryModal({ staffId, onClose, onSaved }: { staffId: number; onCl
         {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
         <div className="mt-5 flex gap-3">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
-          <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">{busy ? "Saving…" : "Add"}</button>
+          <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">{busy ? "Saving…" : "Add"}</button>
         </div>
       </div>
     </div>
@@ -594,7 +594,7 @@ function UsualRotaModal({ staff, onClose, onSaved }: { staff: Staff; onClose: ()
               <button
                 key={d}
                 onClick={() => setDays(on ? days.filter((x) => x !== i + 1) : [...days, i + 1].sort())}
-                className={`rounded-md px-2.5 py-1 text-xs font-medium ${on ? "bg-brand text-white" : "bg-neutral-100 text-neutral-500"}`}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium ${on ? "bg-brand text-brand-on" : "bg-neutral-100 text-neutral-500"}`}
               >
                 {d}
               </button>
@@ -608,7 +608,7 @@ function UsualRotaModal({ staff, onClose, onSaved }: { staff: Staff; onClose: ()
         {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
         <div className="mt-5 flex gap-3">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
-          <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">{busy ? "Saving…" : "Save"}</button>
+          <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">{busy ? "Saving…" : "Save"}</button>
         </div>
       </div>
     </div>

@@ -95,7 +95,7 @@ export default function LoginPage() {
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
         <button
           disabled={busy}
-          className="mt-4 h-11 w-full rounded-xl bg-brand font-semibold text-white hover:bg-brand-dark disabled:opacity-50"
+          className="mt-4 h-11 w-full rounded-xl bg-brand font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50"
         >
           {busy ? "Opening…" : "Sign in"}
         </button>

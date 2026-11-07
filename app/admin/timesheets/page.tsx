@@ -95,7 +95,7 @@ export default function TimesheetsPage() {
         <button onClick={printHours} className={`${printMsg ? "" : "ml-auto "}rounded-lg border border-neutral-300 px-3 py-1.5 font-semibold hover:bg-neutral-50`}>
           🖨 Print hours
         </button>
-        <button onClick={generate} disabled={busy} className="rounded-lg bg-brand px-3 py-1.5 font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
+        <button onClick={generate} disabled={busy} className="rounded-lg bg-brand px-3 py-1.5 font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">
           {busy ? "…" : "Generate / refresh"}
         </button>
       </div>

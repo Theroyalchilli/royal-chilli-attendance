@@ -93,15 +93,15 @@ export default function ReportsPage() {
       <h1 className="text-lg font-semibold print:hidden">Reports</h1>
 
       <div className="mt-4 flex gap-1 rounded-lg border border-neutral-300 bg-white p-0.5 text-sm w-fit print:hidden">
-        <button onClick={() => setTab("today")} className={`rounded-md px-3 py-1.5 font-medium ${tab === "today" ? "bg-brand text-white" : "text-neutral-600"}`}>Today</button>
-        <button onClick={() => setTab("range")} className={`rounded-md px-3 py-1.5 font-medium ${tab === "range" ? "bg-brand text-white" : "text-neutral-600"}`}>Date Range</button>
+        <button onClick={() => setTab("today")} className={`rounded-md px-3 py-1.5 font-medium ${tab === "today" ? "bg-brand text-brand-on" : "text-neutral-600"}`}>Today</button>
+        <button onClick={() => setTab("range")} className={`rounded-md px-3 py-1.5 font-medium ${tab === "range" ? "bg-brand text-brand-on" : "text-neutral-600"}`}>Date Range</button>
       </div>
 
       {tab === "range" && (
         <div className="mt-3 flex flex-wrap items-end gap-2 text-sm print:hidden">
           <label className="flex flex-col gap-1"><span className="text-xs text-neutral-500">From</span><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-lg border border-neutral-300 px-2 py-1.5" /></label>
           <label className="flex flex-col gap-1"><span className="text-xs text-neutral-500">To</span><input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-lg border border-neutral-300 px-2 py-1.5" /></label>
-          <button onClick={() => { setFrom(todayISO()); setTo(todayISO()); }} className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${isToday ? "border-brand bg-brand text-white" : "border-neutral-300 bg-white"}`}>Today</button>
+          <button onClick={() => { setFrom(todayISO()); setTo(todayISO()); }} className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${isToday ? "border-brand bg-brand text-brand-on" : "border-neutral-300 bg-white"}`}>Today</button>
         </div>
       )}
 
@@ -113,7 +113,7 @@ export default function ReportsPage() {
             {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </label>
-        <button onClick={() => window.print()} className="rounded-lg bg-brand px-3 py-1.5 font-semibold text-white hover:bg-brand-dark">🖨️ Print</button>
+        <button onClick={() => window.print()} className="rounded-lg bg-brand px-3 py-1.5 font-semibold text-brand-on hover:bg-brand-dark">🖨️ Print</button>
       </div>
 
       {loading ? (

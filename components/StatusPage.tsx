@@ -22,9 +22,9 @@ export default function StatusPage({ icon, title, lines = [], actions = [], name
   note?: string;
   digest?: string;
 }) {
-  const btn = (a: StatusAction) => `rounded-xl px-4 py-3 text-sm font-semibold text-center ${a.primary ? "bg-[#E34435] text-white" : "border border-[#D8CFBD] bg-white text-[#201B18]"}`;
+  const btn = (a: StatusAction) => `rounded-xl px-4 py-3 text-sm font-semibold text-center ${a.primary ? "bg-brand text-brand-on" : "border border-[#D8CFBD] bg-white text-[#201B18]"}`;
   return (
-    <div className="grid min-h-[70vh] place-items-center bg-[#FAF7F2] px-6 py-12 text-center">
+    <div className="grid min-h-[70vh] place-items-center bg-brand-wash px-6 py-12 text-center">
       <div className="w-full max-w-sm">
         <div className="flex justify-center"><BrandLogo /></div>
         {name && <p style={{ fontFamily: "var(--font-space-grotesk)" }} className="mt-3 text-[15px] font-semibold text-[#201B18]">{name}</p>}
@@ -49,12 +49,12 @@ export default function StatusPage({ icon, title, lines = [], actions = [], name
 /** The loading screen: logo, name and a moving bar (app/me/loading.tsx, app/admin/loading.tsx). */
 export function LoadingScreen({ name }: { name?: string | null }) {
   return (
-    <div className="grid min-h-[70vh] place-items-center bg-[#FAF7F2] px-6 text-center" role="status" aria-live="polite">
+    <div className="grid min-h-[70vh] place-items-center bg-brand-wash px-6 text-center" role="status" aria-live="polite">
       <div>
         <div className="flex justify-center"><BrandLogo /></div>
         {name && <p style={{ fontFamily: "var(--font-space-grotesk)" }} className="mt-3 text-[15px] font-semibold text-[#201B18]">{name}</p>}
         <div className="mx-auto mt-6 h-1 w-40 overflow-hidden rounded-full bg-[#EDE7DA]">
-          <div className="h-full w-1/3 rounded-full bg-[#E34435] motion-safe:animate-[hub-load_1.1s_ease-in-out_infinite]" />
+          <div className="h-full w-1/3 rounded-full bg-brand motion-safe:animate-[hub-load_1.1s_ease-in-out_infinite]" />
         </div>
         <p className="mt-3 text-[13px] text-[#6B625B]">Loading…</p>
       </div>
@@ -67,7 +67,7 @@ export function InlineLoading() {
   return (
     <div className="my-8 flex flex-col items-center" role="status" aria-live="polite">
       <div className="h-1 w-32 overflow-hidden rounded-full bg-[#EDE7DA]">
-        <div className="h-full w-1/3 rounded-full bg-[#E34435] motion-safe:animate-[hub-load_1.1s_ease-in-out_infinite]" />
+        <div className="h-full w-1/3 rounded-full bg-brand motion-safe:animate-[hub-load_1.1s_ease-in-out_infinite]" />
       </div>
       <p className="mt-2 text-xs text-[#6B625B]">Loading…</p>
     </div>
