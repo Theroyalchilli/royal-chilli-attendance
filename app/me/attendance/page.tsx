@@ -59,7 +59,7 @@ export default function MyAttendance() {
             <button
               key={m}
               onClick={() => { setMode(m); setOffset(0); }}
-              className={`rounded-md px-3 py-1 capitalize ${mode === m ? "bg-brand text-white" : "text-neutral-500"}`}
+              className={`rounded-md px-3 py-1 capitalize ${mode === m ? "bg-brand text-brand-on" : "text-neutral-500"}`}
             >
               {m}
             </button>

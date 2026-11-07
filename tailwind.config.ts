@@ -10,12 +10,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        cream: "#FFFBEB",
+        cream: "rgb(var(--brand-page) / <alpha-value>)",
         ink: "#201B18",
-        line: "#E4DFD3",
+        line: "rgb(var(--brand-line) / <alpha-value>)",
         brand: {
-          DEFAULT: "#E34435",
-          dark: "#C82D1D",
+          DEFAULT: "rgb(var(--brand-main) / <alpha-value>)",
+          dark: "rgb(var(--brand-deep) / <alpha-value>)",
+          on: "rgb(var(--brand-on) / <alpha-value>)",
+          accent: "rgb(var(--brand-accent) / <alpha-value>)",
+          "on-accent": "rgb(var(--brand-on-accent) / <alpha-value>)",
+          tint: "rgb(var(--brand-tint) / <alpha-value>)",
+          cream: "rgb(var(--brand-cream) / <alpha-value>)",
+          wash: "rgb(var(--brand-wash) / <alpha-value>)",
         },
       },
     },

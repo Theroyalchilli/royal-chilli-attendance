@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { freshStart } from "@/lib/auth-sync";
@@ -33,7 +32,7 @@ export default function Shell({
   nav: NavGroup[];
   approvals?: number;
   /** The business this login works in; `switcher` = the owner's picker (owner only). */
-  business?: { name: string; switcher?: SwitcherOption[] };
+  business?: { name: string; logoUrl?: string | null; switcher?: SwitcherOption[] };
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -101,11 +100,11 @@ export default function Shell({
   }
 
   const badge = (n: number) =>
-    n > 0 ? <span className="rounded-full bg-brand px-1.5 text-[11px] font-bold leading-[18px] text-white tabular-nums">{n > 99 ? "99+" : n}</span> : null;
+    n > 0 ? <span className="rounded-full bg-brand-accent px-1.5 text-[11px] font-bold leading-[18px] text-brand-on-accent tabular-nums">{n > 99 ? "99+" : n}</span> : null;
 
   const topBtn = "flex items-center gap-1.5 rounded-[9px] px-[11px] py-2 text-[13.5px] font-semibold transition-colors";
   const ddPanel = "top-dd absolute right-0 top-[calc(100%+6px)] z-40 min-w-[220px] rounded-xl border border-line bg-white p-1.5 shadow-[0_12px_30px_rgba(40,25,15,0.12)]";
-  const ddLink = (on: boolean) => `flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13.5px] text-ink hover:bg-[#F6F1E6] ${on ? "bg-brand/10 font-semibold" : ""}`;
+  const ddLink = (on: boolean) => `flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13.5px] text-ink hover:bg-brand-cream ${on ? "bg-brand/10 font-semibold" : ""}`;
   const drawerLink = (on: boolean) => `flex items-center gap-2.5 rounded-[10px] px-2.5 py-3 text-[15px] text-ink ${on ? "bg-brand/10 font-semibold" : "hover:bg-brand/5"}`;
 
   const staffHub: NavItem = { href: "/api/sso/staffhub", label: "Staff Hub", icon: "🍽️" };
@@ -125,11 +124,12 @@ export default function Shell({
 
   return (
     <div className="flex min-h-dvh flex-col bg-cream">
-      <header ref={barRef} className={`sticky top-0 z-30 print:hidden ${isEmployee ? "bg-brand text-white shadow-sm md:bg-white md:text-ink md:shadow-none" : "bg-white"} border-b border-line`}>
+      <header ref={barRef} className={`sticky top-0 z-30 print:hidden ${isEmployee ? "bg-brand text-brand-on shadow-sm md:bg-white md:text-ink md:shadow-none" : "bg-white"} border-b border-line`}>
         <div className="mx-auto flex max-w-[1400px] items-center gap-4 px-4 py-2.5">
           <Link href={isEmployee ? "/me" : "/admin"} className="flex min-w-0 items-center gap-2.5">
-            {user.businessId === 1 ? (
-              <Image src="/logo.png" alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-[10px] object-cover" />
+            {business?.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={business.logoUrl} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-[10px] bg-white object-contain" />
             ) : (
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-ink text-sm font-bold text-white">{initials(bizName)}</span>
             )}
@@ -155,14 +155,14 @@ export default function Shell({
               !g.label ? (
                 g.items.map((n) => (
                   <Link key={n.href} href={n.href}
-                    className={`${topBtn} ${active(n.href) ? "bg-brand/10 text-brand-dark" : "text-neutral-600 hover:bg-[#F6F1E6] hover:text-ink"}`}>
+                    className={`${topBtn} ${active(n.href) ? "bg-brand/10 text-brand-dark" : "text-neutral-600 hover:bg-brand-cream hover:text-ink"}`}>
                     {n.label}
                   </Link>
                 ))
               ) : (
                 <div key={gi} onMouseEnter={() => hoverGroup(g.label!)} className={`top-mi relative ${openMenu === g.label ? "open" : ""}`}>
                   <button type="button" onClick={() => toggle(g.label!)} aria-expanded={openMenu === g.label}
-                    className={`${topBtn} ${groupActive(g) ? "text-brand-dark" : "text-neutral-600"} hover:bg-[#F6F1E6]`}>
+                    className={`${topBtn} ${groupActive(g) ? "text-brand-dark" : "text-neutral-600"} hover:bg-brand-cream`}>
                     {g.label} {g.badge === "approvals" && badge(approvals)} <span className="text-[10px] opacity-60">▼</span>
                   </button>
                   <div className={ddPanel}>
@@ -172,10 +172,10 @@ export default function Shell({
               ),
             )}
             <span className="ml-1"><NotificationBell /></span>
-            {!isEmployee && itemLink({ ...staffHub, label: "Staff Hub ↗︎" }, `${topBtn} text-neutral-600 hover:bg-[#F6F1E6]`)}
+            {!isEmployee && itemLink({ ...staffHub, label: "Staff Hub ↗︎" }, `${topBtn} text-neutral-600 hover:bg-brand-cream`)}
             <div onMouseEnter={() => hoverGroup("__acct")} className={`top-mi relative ${openMenu === "__acct" ? "open" : ""}`}>
               <button type="button" onClick={() => toggle("__acct")} aria-label="Account"
-                className="ml-1 grid h-9 w-9 place-items-center rounded-full bg-brand-dark text-sm font-semibold text-white">
+                className="ml-1 grid h-9 w-9 place-items-center rounded-full bg-brand-dark text-sm font-semibold text-brand-on">
                 {user.name.charAt(0).toUpperCase()}
               </button>
               <div className={ddPanel}>
@@ -197,7 +197,7 @@ export default function Shell({
               <span className="relative">
                 <button
                   onClick={() => setProfileOpen((v) => !v)}
-                  className="grid h-8 w-8 place-items-center rounded-full bg-brand-dark text-sm font-semibold text-white"
+                  className="grid h-8 w-8 place-items-center rounded-full bg-brand-dark text-sm font-semibold text-brand-on"
                   aria-label="Account"
                 >
                   {user.name.charAt(0).toUpperCase()}
@@ -217,7 +217,7 @@ export default function Shell({
               </span>
             ) : (
               <button type="button" onClick={() => setDrawerOpen(true)} aria-label="Open menu"
-                className="grid h-10 w-10 place-items-center rounded-xl bg-[#F6F1E6] text-lg">☰</button>
+                className="grid h-10 w-10 place-items-center rounded-xl bg-brand-cream text-lg">☰</button>
             )}
           </span>
         </div>

@@ -29,9 +29,9 @@ export async function staffIdsAt(businessId: number): Promise<number[]> {
   return (data ?? []).map((r) => r.id as number);
 }
 
-export type BusinessRow = { id: number; name: string; active: boolean; domain: string | null; custom_domain: string | null; logo_url: string | null; login_code: string | null };
+export type BusinessRow = { id: number; name: string; active: boolean; domain: string | null; custom_domain: string | null; logo_url: string | null; login_code: string | null; brand_colour: string | null };
 
-const BUSINESS_COLUMNS = "id, name, active, domain, custom_domain, logo_url, login_code";
+const BUSINESS_COLUMNS = "id, name, active, domain, custom_domain, logo_url, login_code, brand_colour";
 
 /** Every business, in display order (the owner's switcher). */
 export async function listBusinesses(): Promise<BusinessRow[]> {
@@ -49,9 +49,11 @@ export async function getBusiness(id: number): Promise<BusinessRow | null> {
 export async function headerBusiness(session: { businessId: number; owner?: boolean }) {
   if (session.owner) {
     const all = await listBusinesses().catch(() => []);
-    return { name: all.find((b) => b.id === session.businessId)?.name ?? "", switcher: all };
+    const mine = all.find((b) => b.id === session.businessId);
+    return { name: mine?.name ?? "", logoUrl: mine?.logo_url ?? null, switcher: all };
   }
-  return { name: (await getBusiness(session.businessId).catch(() => null))?.name ?? "", switcher: undefined };
+  const mine = await getBusiness(session.businessId).catch(() => null);
+  return { name: mine?.name ?? "", logoUrl: mine?.logo_url ?? null, switcher: undefined };
 }
 
 /**

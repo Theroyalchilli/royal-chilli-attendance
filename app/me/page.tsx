@@ -146,7 +146,7 @@ export default function MeDashboard() {
           title: "My Rota",
           href: "/me/rota",
           interactive: true,
-          body: <WeekGlance data={rotaData} color="#E34435" />,
+          body: <WeekGlance data={rotaData} color="rgb(var(--brand-main))" />,
         },
         {
           title: "My Hours",

@@ -50,7 +50,7 @@ export default function ManagerMessageBanner() {
       <h3 className="mt-1.5 text-base font-bold text-ink">{title}</h3>
       <p className="mt-1 whitespace-pre-line text-sm text-neutral-700">{body}</p>
       <div className="mt-3 flex justify-end">
-        <button onClick={gotIt} className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">
+        <button onClick={gotIt} className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-brand-on hover:bg-brand-dark">
           Got it ✓
         </button>
       </div>

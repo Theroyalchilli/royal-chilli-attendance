@@ -83,7 +83,7 @@ export default function PushPrompt() {
       <p className="mt-1 text-neutral-600">A reminder before each shift, if you forget to clock in or out, and when your rota changes.</p>
       {error && <p className="mt-1 text-red-600">{error}</p>}
       <div className="mt-3 flex gap-2">
-        <button onClick={turnOn} disabled={state === "busy"} className="flex-1 rounded-xl bg-brand px-4 py-2.5 font-semibold text-white hover:bg-brand-dark disabled:opacity-60">
+        <button onClick={turnOn} disabled={state === "busy"} className="flex-1 rounded-xl bg-brand px-4 py-2.5 font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-60">
           {state === "busy" ? "Turning on…" : "Turn on notifications"}
         </button>
         <button onClick={notNow} className="rounded-xl px-3 py-2.5 text-neutral-500">Not now</button>
