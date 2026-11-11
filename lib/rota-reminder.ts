@@ -31,7 +31,7 @@ export async function sendRotaReminders(stage: RotaReminderStage, now: Date = ne
   const link = `/admin/rota?week=${from}`;
   const { data: businesses } = await supabase.from("businesses").select("id, name").eq("active", true);
   const owners = stage === "final"
-    ? ((await supabase.from("staff").select("id").eq("active", 1).eq("is_owner", true)).data ?? []).map((s) => s.id as number)
+    ? ((await supabase.from("staff").select("id").eq("active", 1).eq("is_owner", true).eq("view_only", false)).data ?? []).map((s) => s.id as number)
     : [];
   const reminded: string[] = [];
 
