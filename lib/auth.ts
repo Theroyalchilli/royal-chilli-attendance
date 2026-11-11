@@ -54,7 +54,30 @@ export async function getSession(): Promise<SessionUser | null> {
 }
 
 export async function getSessionFromRequest(req: NextRequest): Promise<SessionUser | null> {
-  return verify(req.cookies.get(COOKIE_NAME)?.value);
+  const session = await verify(req.cookies.get(COOKIE_NAME)?.value);
+  // A view-only Super admin (POS migration 148, 2026-11-11) can look at
+  // everything but every save, change or delete is refused — except signing
+  // out and switching business, which only change the session.
+  if (session?.owner && !READS.has(req.method) && !VIEW_ONLY_ALLOWED.some((p) => req.nextUrl.pathname.startsWith(p)) && (await isViewOnly(session.id))) {
+    return null;
+  }
+  return session;
+}
+
+const READS = new Set(["GET", "HEAD", "OPTIONS"]);
+const VIEW_ONLY_ALLOWED = ["/api/auth/logout", "/api/auth/switch-business", "/api/sso/"];
+const viewOnlyCache = new Map<number, { v: boolean; at: number }>();
+
+/** Is this login view only (staff.view_only)? Checked fresh every 30 seconds. */
+export async function isViewOnly(staffId: number): Promise<boolean> {
+  const hit = viewOnlyCache.get(staffId);
+  if (hit && Date.now() - hit.at < 30_000) return hit.v;
+  const { default: supabase } = await import("./supabase");
+  const { data, error } = await supabase.from("staff").select("view_only").eq("id", staffId).maybeSingle();
+  // If it can't be checked, refuse the change rather than allow it.
+  const v = error ? true : data?.view_only === true;
+  viewOnlyCache.set(staffId, { v, at: Date.now() });
+  return v;
 }
 
 export function getSessionCookieOptions(host?: string | null) {
