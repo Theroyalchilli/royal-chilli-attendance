@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSession, isViewOnly } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { canManageAttendance } from "@/lib/permissions";
 import { navFor } from "@/lib/nav";
 import Shell from "@/components/Shell";
@@ -19,11 +19,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <Shell user={session} nav={navFor(session.role)} approvals={approvals} business={business}>
-      {session.owner && (await isViewOnly(session.id)) && (
-        <div role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-center text-[13px] font-medium text-amber-900">
-          👁 View only login: you can see everything, but this login can&apos;t change or save anything.
-        </div>
-      )}
       {children}
     </Shell>
   );
