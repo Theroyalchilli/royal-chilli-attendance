@@ -1,5 +1,7 @@
 "use client";
 
+import { InlineLoading } from "@/components/StatusPage";
+import BusyLabel from "@/components/BusyLabel";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { hm, dayLabel, clockTime } from "@/lib/format";
@@ -146,7 +148,7 @@ export default function EmployeeProfilePage() {
     load();
   }
 
-  if (loading && !data) return <p className="mx-auto max-w-4xl text-sm text-neutral-400">Loading…</p>;
+  if (loading && !data) return <InlineLoading />;
   if (!data) return <p className="mx-auto max-w-4xl text-sm text-neutral-400">Employee not found.</p>;
 
   const { staff, summary } = data;
@@ -457,7 +459,7 @@ function AttendanceEditModal({ row, canEditLockedTimes, onClose, onSaved }: { ro
             <button onClick={() => save({ approval_status: "approved" })} disabled={busy} className="rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white">Approve</button>
           )}
           <button onClick={() => save()} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">
-            {busy ? "Saving…" : "Save"}
+            <BusyLabel busy={!!busy} text="Saving…">{"Save"}</BusyLabel>
           </button>
         </div>
         {(!alreadyChanged || canEditLockedTimes) && <button onClick={del} disabled={busy} className="mt-2 w-full text-xs text-red-500 hover:underline">Delete this entry</button>}
@@ -507,7 +509,7 @@ function ManualEntryModal({ staffId, onClose, onSaved }: { staffId: number; onCl
         {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
         <div className="mt-5 flex gap-3">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
-          <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">{busy ? "Saving…" : "Add"}</button>
+          <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50"><BusyLabel busy={!!busy} text="Saving…">{"Add"}</BusyLabel></button>
         </div>
       </div>
     </div>
@@ -608,7 +610,7 @@ function UsualRotaModal({ staff, onClose, onSaved }: { staff: Staff; onClose: ()
         {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
         <div className="mt-5 flex gap-3">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
-          <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">{busy ? "Saving…" : "Save"}</button>
+          <button onClick={save} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50"><BusyLabel busy={!!busy} text="Saving…">{"Save"}</BusyLabel></button>
         </div>
       </div>
     </div>

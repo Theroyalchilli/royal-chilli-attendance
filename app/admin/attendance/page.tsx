@@ -1,5 +1,6 @@
 "use client";
 
+import BusyLabel from "@/components/BusyLabel";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { clockTime, dayLabel, hm } from "@/lib/format";
 import { SHIFT_STATUS_BADGE, SHIFT_STATUS_LABEL, type ShiftStatus } from "@/lib/shift-status";
@@ -480,7 +481,7 @@ function StatusModal({ target, busy, error, onClose, onSave }: { target: StatusT
         <div className="mt-4 flex gap-2">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
           <button onClick={() => onSave(reason)} disabled={busy} className={`flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${copy.tone}`}>
-            {busy ? "Saving…" : copy.button}
+            <BusyLabel busy={!!busy} text="Saving…">{copy.button}</BusyLabel>
           </button>
         </div>
       </div>
@@ -641,7 +642,7 @@ function EditModal({ row, canEditLockedTimes, onClose, onSaved }: { row: Row; ca
             <button onClick={() => save({ approval_status: "approved" })} disabled={busy} className="rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white">Approve</button>
           )}
           <button onClick={() => save()} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">
-            {busy ? "Saving…" : "Save"}
+            <BusyLabel busy={!!busy} text="Saving…">{"Save"}</BusyLabel>
           </button>
         </div>
         {(!alreadyChanged || canEditLockedTimes) && <button onClick={del} disabled={busy} className="mt-2 w-full text-xs text-red-500 hover:underline">Delete this entry</button>}
@@ -795,7 +796,7 @@ function ManualEntryModal({ staff, canEditLockedTimes, prefill, onEditExisting, 
         </div>
         <div className="flex shrink-0 gap-3 border-t border-neutral-100 bg-white px-5 py-4">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Close</button>
-          {showEntryForm && <button onClick={save} disabled={busy || existingLoading || existingLoadFailed || !staffId || (overlappingRows.length > 0 && !overlapConfirmed)} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">{busy ? "Saving…" : existingRows.length ? "Save additional session" : "Save entry"}</button>}
+          {showEntryForm && <button onClick={save} disabled={busy || existingLoading || existingLoadFailed || !staffId || (overlappingRows.length > 0 && !overlapConfirmed)} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50"><BusyLabel busy={!!busy} text="Saving…">{existingRows.length ? "Save additional session" : "Save entry"}</BusyLabel></button>}
         </div>
       </div>
     </div>

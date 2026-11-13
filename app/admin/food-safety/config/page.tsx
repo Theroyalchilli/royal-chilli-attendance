@@ -1,5 +1,7 @@
 "use client";
 
+import { InlineLoading } from "@/components/StatusPage";
+import BusyLabel from "@/components/BusyLabel";
 import { useCallback, useEffect, useState } from "react";
 
 type CheckType = { id: number; check_window: string; label: string; rule_text: string | null; requires_photo: boolean; active: boolean; display_order: number };
@@ -23,6 +25,7 @@ export default function FoodSafetyConfigPage() {
   const [courses, setCourses] = useState<Course[] | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState<"check" | "temp" | "course" | null>(null);
 
   const load = useCallback(async () => {
     const [c, t, co] = await Promise.all([
@@ -110,7 +113,7 @@ export default function FoodSafetyConfigPage() {
 
       {/* Checks */}
       <SectionHeader title="Checks" subtitle="Opening, service, closing and weekly checklist items" />
-      {checks === null ? <p className="mt-2 text-sm text-neutral-400">Loading…</p> : (
+      {checks === null ? <InlineLoading /> : (
         <div className="mt-2 space-y-1.5">
           {checks.map((c) => (
             <div key={c.id} className={`flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 ${!c.active ? "opacity-50" : ""}`}>
@@ -133,12 +136,12 @@ export default function FoodSafetyConfigPage() {
           <input value={newCheck.label} onChange={(e) => setNewCheck((f) => ({ ...f, label: e.target.value }))} placeholder="Check label" className="rounded-lg border border-neutral-200 px-2 py-1.5 text-sm" />
           <input value={newCheck.rule_text} onChange={(e) => setNewCheck((f) => ({ ...f, rule_text: e.target.value }))} placeholder="Rule text (optional)" className="col-span-2 rounded-lg border border-neutral-200 px-2 py-1.5 text-sm" />
         </div>
-        <button disabled={busy} onClick={addCheck} className="mt-2 w-full rounded-lg bg-neutral-800 py-2 text-sm font-semibold text-white disabled:opacity-50">+ Add check</button>
+        <button disabled={busy} onClick={() => { setAdding("check"); addCheck(); }} className="mt-2 w-full rounded-lg bg-neutral-800 py-2 text-sm font-semibold text-white disabled:opacity-50"><BusyLabel busy={busy && adding === "check"} text="Adding…">+ Add check</BusyLabel></button>
       </div>
 
       {/* Temps */}
       <SectionHeader title="Temperature checks" subtitle="Fridge, freezer, hot-hold and cooking rules" />
-      {temps === null ? <p className="mt-2 text-sm text-neutral-400">Loading…</p> : (
+      {temps === null ? <InlineLoading /> : (
         <div className="mt-2 space-y-1.5">
           {temps.map((t) => (
             <div key={t.id} className={`flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 ${!t.active ? "opacity-50" : ""}`}>
@@ -163,12 +166,12 @@ export default function FoodSafetyConfigPage() {
           <input type="number" step="0.1" value={newTemp.limit_value} onChange={(e) => setNewTemp((f) => ({ ...f, limit_value: e.target.value }))} placeholder="Limit °C" className="rounded-lg border border-neutral-200 px-2 py-1.5 text-sm" />
           <input value={newTemp.rule_text} onChange={(e) => setNewTemp((f) => ({ ...f, rule_text: e.target.value }))} placeholder="Rule text (optional)" className="col-span-2 rounded-lg border border-neutral-200 px-2 py-1.5 text-sm" />
         </div>
-        <button disabled={busy} onClick={addTemp} className="mt-2 w-full rounded-lg bg-neutral-800 py-2 text-sm font-semibold text-white disabled:opacity-50">+ Add temperature check</button>
+        <button disabled={busy} onClick={() => { setAdding("temp"); addTemp(); }} className="mt-2 w-full rounded-lg bg-neutral-800 py-2 text-sm font-semibold text-white disabled:opacity-50"><BusyLabel busy={busy && adding === "temp"} text="Adding…">+ Add temperature check</BusyLabel></button>
       </div>
 
       {/* Courses */}
       <SectionHeader title="Training courses" subtitle="What staff can be trained on, and how often it needs refreshing" />
-      {courses === null ? <p className="mt-2 text-sm text-neutral-400">Loading…</p> : (
+      {courses === null ? <InlineLoading /> : (
         <div className="mt-2 space-y-1.5">
           {courses.map((c) => (
             <div key={c.id} className={`flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 ${!c.active ? "opacity-50" : ""}`}>
@@ -192,7 +195,7 @@ export default function FoodSafetyConfigPage() {
             Has a level (e.g. 1/2/3)
           </label>
         </div>
-        <button disabled={busy} onClick={addCourse} className="mt-2 w-full rounded-lg bg-neutral-800 py-2 text-sm font-semibold text-white disabled:opacity-50">+ Add course</button>
+        <button disabled={busy} onClick={() => { setAdding("course"); addCourse(); }} className="mt-2 w-full rounded-lg bg-neutral-800 py-2 text-sm font-semibold text-white disabled:opacity-50"><BusyLabel busy={busy && adding === "course"} text="Adding…">+ Add course</BusyLabel></button>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { InlineLoading } from "@/components/StatusPage";
 import { useEffect, useState } from "react";
 import PushPrompt from "@/components/PushPrompt";
 import ManagerMessageBanner from "@/components/ManagerMessageBanner";
@@ -60,7 +61,7 @@ export default function AdminDashboard() {
     return () => { clearInterval(a); clearInterval(b); };
   }, []);
 
-  if (!d) return <p className="text-sm text-neutral-400">Loading…</p>;
+  if (!d) return <InlineLoading />;
 
   const a = d.attendance;
   const pct = (n: number) => (a.total ? Math.round((n / a.total) * 100) : 0);

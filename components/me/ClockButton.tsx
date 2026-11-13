@@ -1,5 +1,6 @@
 "use client";
 
+import BusyLabel from "@/components/BusyLabel";
 import { useCallback, useEffect, useState } from "react";
 import { getPosition } from "@/lib/selfie";
 import { preloadFaceDetector } from "@/lib/face-detector";
@@ -98,7 +99,7 @@ export default function ClockButton() {
           clockedIn ? "bg-red-600 hover:bg-red-500" : "bg-emerald-600 hover:bg-emerald-500"
         }`}
       >
-        {busy ? busyLabel : clockedIn ? "Clock Out" : "Clock In"}
+        <BusyLabel busy={!!busy} text={busyLabel}>{clockedIn ? "Clock Out" : "Clock In"}</BusyLabel>
       </button>
 
       {phase === "done" && <p className="mt-2 text-center text-sm font-medium text-emerald-600">{msg}</p>}

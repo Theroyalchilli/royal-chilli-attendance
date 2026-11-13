@@ -1,5 +1,7 @@
 "use client";
 
+import { InlineLoading } from "@/components/StatusPage";
+import BusyLabel from "@/components/BusyLabel";
 import { useCallback, useEffect, useState } from "react";
 
 type Supplier = { id: number; name: string; contact_name: string | null; phone: string | null; approved: boolean; docs_status: string | null };
@@ -78,7 +80,7 @@ export default function TracePage() {
 
       <h2 className="mt-6 text-xs font-semibold uppercase tracking-wide text-neutral-400">Suppliers</h2>
       {suppliers === null ? (
-        <p className="mt-2 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : suppliers.length === 0 ? (
         <p className="mt-2 text-sm text-neutral-400">No suppliers yet — add them from the POS&apos;s Inventory section first.</p>
       ) : (
@@ -165,13 +167,13 @@ export default function TracePage() {
           )}
           <div className="mt-2 flex justify-end gap-2">
             <button onClick={() => setShowForm(false)} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-neutral-500">Cancel</button>
-            <button disabled={busy} onClick={submitDelivery} className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Save</button>
+            <button disabled={busy} onClick={submitDelivery} className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"><BusyLabel busy={busy} text="Saving…">Save</BusyLabel></button>
           </div>
         </div>
       )}
 
       {deliveries === null ? (
-        <p className="mt-2 text-sm text-neutral-400">Loading…</p>
+        <InlineLoading />
       ) : deliveries.length === 0 ? (
         <p className="mt-2 text-sm text-neutral-400">Nothing logged yet.</p>
       ) : (

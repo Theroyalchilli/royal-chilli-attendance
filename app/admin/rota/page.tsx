@@ -1,5 +1,6 @@
 "use client";
 
+import BusyLabel from "@/components/BusyLabel";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { confirmDelete } from "@/components/ui/confirm";
 import { mondayOf, ukMonday, ukToday } from "@/lib/uk-date";
@@ -82,9 +83,11 @@ export default function RotaPage() {
   // Read-only once the whole week is behind us; today stays editable.
   const weekIsPast = days.length > 0 && days[6] < today;
 
+  const [generating, setGenerating] = useState<"defaults" | "copy_previous" | null>(null);
   async function generate(mode: "defaults" | "copy_previous") {
     if (weekIsPast) return;
     setBusy(true);
+    setGenerating(mode);
     const res = await fetch("/api/admin/rota/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -121,8 +124,8 @@ export default function RotaPage() {
         <button onClick={() => setWeekStart(ukMonday())} className="rounded-lg border border-neutral-300 px-2 py-1.5 text-xs">This week</button>
         {!weekIsPast && (
           <div className="ml-auto flex gap-2">
-            <button onClick={() => generate("copy_previous")} disabled={busy} className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs disabled:opacity-50">Copy last week</button>
-            <button onClick={() => generate("defaults")} disabled={busy} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">Fill from defaults</button>
+            <button onClick={() => generate("copy_previous")} disabled={busy} className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs disabled:opacity-50"><BusyLabel busy={busy && generating === "copy_previous"} text="Copying…">Copy last week</BusyLabel></button>
+            <button onClick={() => generate("defaults")} disabled={busy} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50"><BusyLabel busy={busy && generating === "defaults"} text="Filling…">Fill from defaults</BusyLabel></button>
           </div>
         )}
       </div>
@@ -302,7 +305,7 @@ function ShiftModal({
             disabled={busy}
             className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50"
           >
-            {busy ? "…" : "Save"}
+            <BusyLabel busy={!!busy} text="Working…">{"Save"}</BusyLabel>
           </button>
         </div>
       </div>
