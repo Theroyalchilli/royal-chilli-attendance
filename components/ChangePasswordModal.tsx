@@ -1,5 +1,6 @@
 "use client";
 
+import BusyLabel from "@/components/BusyLabel";
 import { useState } from "react";
 import { PasswordInput } from "@/components/ui/password-input";
 
@@ -58,7 +59,7 @@ export default function ChangePasswordModal({ onClose }: { onClose: () => void }
         <div className="mt-5 flex gap-3">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
           <button onClick={submit} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">
-            {busy ? "Saving…" : "Save"}
+            <BusyLabel busy={!!busy} text="Saving…">{"Save"}</BusyLabel>
           </button>
         </div>
       </div>

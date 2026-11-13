@@ -1,5 +1,6 @@
 "use client";
 
+import BusyLabel from "@/components/BusyLabel";
 import { useCallback, useEffect, useState } from "react";
 import { confirmDelete } from "@/components/ui/confirm";
 
@@ -187,7 +188,7 @@ export default function MessagesPage() {
         {done && <p className="mt-2 text-sm font-medium text-emerald-700">✓ {done}</p>}
 
         <button onClick={send} disabled={busy} className="mt-4 w-full rounded-xl bg-brand py-3 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">
-          {busy ? "Sending…" : later ? "Schedule message" : "Send now"}
+          <BusyLabel busy={!!busy} text="Sending…">{later ? "Schedule message" : "Send now"}</BusyLabel>
         </button>
       </div>
 

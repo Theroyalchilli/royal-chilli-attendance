@@ -46,29 +46,26 @@ export default function StatusPage({ icon, title, lines = [], actions = [], name
   );
 }
 
-/** The loading screen: logo, name and a moving bar (app/me/loading.tsx, app/admin/loading.tsx). */
+/** The loading screen: logo, name and a spinner (app/me/loading.tsx, app/admin/loading.tsx). */
 export function LoadingScreen({ name }: { name?: string | null }) {
   return (
     <div className="grid min-h-[70vh] place-items-center bg-brand-wash px-6 text-center" role="status" aria-live="polite">
       <div>
         <div className="flex justify-center"><BrandLogo /></div>
         {name && <p style={{ fontFamily: "var(--font-space-grotesk)" }} className="mt-3 text-[15px] font-semibold text-[#201B18]">{name}</p>}
-        <div className="mx-auto mt-6 h-1 w-40 overflow-hidden rounded-full bg-[#EDE7DA]">
-          <div className="h-full w-1/3 rounded-full bg-brand motion-safe:animate-[hub-load_1.1s_ease-in-out_infinite]" />
-        </div>
+        {/* A spinner, not a bar: we can't tell how long it will take (owner, 2026-11-13). */}
+        <span aria-hidden="true" className="mx-auto mt-6 block h-9 w-9 animate-spin rounded-full border-4 border-[#EDE7DA] border-t-brand motion-reduce:animate-[spin_2.4s_linear_infinite]" />
         <p className="mt-3 text-[13px] text-[#6B625B]">Loading…</p>
       </div>
     </div>
   );
 }
 
-/** A small moving bar for a list that's still loading inside a page. */
+/** A small spinner for a list that's still loading inside a page. */
 export function InlineLoading() {
   return (
     <div className="my-8 flex flex-col items-center" role="status" aria-live="polite">
-      <div className="h-1 w-32 overflow-hidden rounded-full bg-[#EDE7DA]">
-        <div className="h-full w-1/3 rounded-full bg-brand motion-safe:animate-[hub-load_1.1s_ease-in-out_infinite]" />
-      </div>
+      <span aria-hidden="true" className="block h-7 w-7 animate-spin rounded-full border-[3px] border-[#EDE7DA] border-t-brand motion-reduce:animate-[spin_2.4s_linear_infinite]" />
       <p className="mt-2 text-xs text-[#6B625B]">Loading…</p>
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import BusyLabel from "@/components/BusyLabel";
 import { useCallback, useEffect, useState } from "react";
 import { dayLabel } from "@/lib/format";
 import EmptyState from "@/components/EmptyState";
@@ -24,6 +25,7 @@ export default function CorrectionsPage() {
   const [status, setStatus] = useState("pending");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
+  const [pressed, setPressed] = useState<"approve" | "reject" | null>(null);
   const [message, setMessage] = useState("");
 
   const load = useCallback(async () => {
@@ -39,6 +41,7 @@ export default function CorrectionsPage() {
   async function review(id: number, action: "approve" | "reject") {
     const note = action === "reject" ? prompt("Reason for rejecting (optional):") ?? "" : "";
     setBusy(id);
+    setPressed(action);
     setMessage("");
     const res = await fetch(`/api/admin/corrections/${id}`, {
       method: "PATCH",
@@ -91,8 +94,8 @@ export default function CorrectionsPage() {
               {c.review_note && <p className="mt-2 text-xs text-neutral-500">Note: {c.review_note}</p>}
               {c.status === "pending" && (
                 <div className="mt-3 flex gap-2">
-                  <button onClick={() => review(c.id, "approve")} disabled={busy === c.id} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50">Approve</button>
-                  <button onClick={() => review(c.id, "reject")} disabled={busy === c.id} className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm">Reject</button>
+                  <button onClick={() => review(c.id, "approve")} disabled={busy === c.id} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"><BusyLabel busy={busy === c.id && pressed === "approve"} text="Approving…">Approve</BusyLabel></button>
+                  <button onClick={() => review(c.id, "reject")} disabled={busy === c.id} className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm"><BusyLabel busy={busy === c.id && pressed === "reject"} text="Rejecting…">Reject</BusyLabel></button>
                 </div>
               )}
             </div>

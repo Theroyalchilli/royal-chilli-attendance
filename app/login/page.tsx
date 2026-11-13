@@ -1,5 +1,6 @@
 "use client";
 
+import BusyLabel from "@/components/BusyLabel";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { canManageAttendance } from "@/lib/permissions";
@@ -97,7 +98,7 @@ export default function LoginPage() {
           disabled={busy}
           className="mt-4 h-11 w-full rounded-xl bg-brand font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50"
         >
-          {busy ? "Opening…" : "Sign in"}
+          <BusyLabel busy={!!busy} text="Opening…">{"Sign in"}</BusyLabel>
         </button>
       </form>
     </main>

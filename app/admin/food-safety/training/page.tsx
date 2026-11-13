@@ -1,5 +1,6 @@
 "use client";
 
+import BusyLabel from "@/components/BusyLabel";
 import { useCallback, useEffect, useState } from "react";
 import { ukToday } from "@/lib/uk-date";
 import { InlineLoading } from "@/components/StatusPage";
@@ -176,7 +177,7 @@ export default function TeamTrainingPage() {
                         onClick={() => submit(staff.id)}
                         className="mt-2 w-full rounded-lg bg-neutral-800 py-2 text-sm font-semibold text-white disabled:opacity-50"
                       >
-                        Save
+                        <BusyLabel busy={!!busy} text="Saving…">Save</BusyLabel>
                       </button>
                     </div>
                   )}

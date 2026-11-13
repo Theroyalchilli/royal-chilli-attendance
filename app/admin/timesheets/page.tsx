@@ -1,5 +1,6 @@
 "use client";
 
+import BusyLabel from "@/components/BusyLabel";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { hm, decimalHours, roundedShiftSeconds, clockTime, dayLabel } from "@/lib/format";
 import { addDays, ukMonday } from "@/lib/uk-date";
@@ -96,7 +97,7 @@ export default function TimesheetsPage() {
           🖨 Print hours
         </button>
         <button onClick={generate} disabled={busy} className="rounded-lg bg-brand px-3 py-1.5 font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">
-          {busy ? "…" : "Generate / refresh"}
+          <BusyLabel busy={!!busy} text="Working…">{"Generate / refresh"}</BusyLabel>
         </button>
       </div>
       <p className="mt-1 text-xs text-neutral-400">

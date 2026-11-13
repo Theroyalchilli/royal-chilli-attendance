@@ -1,5 +1,7 @@
 "use client";
 
+import { InlineLoading } from "@/components/StatusPage";
+import BusyLabel from "@/components/BusyLabel";
 import { useCallback, useEffect, useState } from "react";
 
 type CheckType = { id: number; check_window: string; label: string; rule_text: string | null; display_order: number };
@@ -30,6 +32,7 @@ export default function FoodSafetyTasks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pressed, setPressed] = useState("");
 
   const [flagging, setFlagging] = useState<number | null>(null);
   const [note, setNote] = useState("");
@@ -50,7 +53,7 @@ export default function FoodSafetyTasks() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <div className="mx-auto max-w-2xl"><p className="mt-8 text-sm text-neutral-400">Loading…</p></div>;
+  if (loading) return <div className="mx-auto max-w-2xl"><InlineLoading /></div>;
   if (!state) return <div className="mx-auto max-w-2xl"><p className="mt-8 text-sm text-neutral-400">Couldn&apos;t load today&apos;s checks.</p></div>;
 
   const { permissions, check_types, temp_types, check_logs, temp_logs, problems, signoff } = state;
@@ -159,10 +162,10 @@ export default function FoodSafetyTasks() {
                       <div className="flex shrink-0 gap-1.5">
                         <button
                           disabled={busy}
-                          onClick={() => submitCheck(c.id, true)}
+                          onClick={() => { setPressed(`ok-${c.id}`); submitCheck(c.id, true); }}
                           className="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
                         >
-                          OK
+                          <BusyLabel busy={busy && pressed === `ok-${c.id}`} text="Saving…" hideText>OK</BusyLabel>
                         </button>
                         <button
                           disabled={busy}
@@ -189,10 +192,10 @@ export default function FoodSafetyTasks() {
                         </button>
                         <button
                           disabled={busy || !note.trim()}
-                          onClick={() => submitCheck(c.id, false, note)}
+                          onClick={() => { setPressed(`flag-${c.id}`); submitCheck(c.id, false, note); }}
                           className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                         >
-                          Save problem
+                          <BusyLabel busy={busy && pressed === `flag-${c.id}`} text="Saving…">Save problem</BusyLabel>
                         </button>
                       </div>
                     </div>
@@ -229,10 +232,10 @@ export default function FoodSafetyTasks() {
                         />
                         <button
                           disabled={busy}
-                          onClick={() => submitTemp(t.id)}
+                          onClick={() => { setPressed(`temp-${t.id}`); submitTemp(t.id); }}
                           className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                         >
-                          Log
+                          <BusyLabel busy={busy && pressed === `temp-${t.id}`} text="Saving…" hideText>Log</BusyLabel>
                         </button>
                       </div>
                     )}
@@ -252,10 +255,10 @@ export default function FoodSafetyTasks() {
                         </button>
                         <button
                           disabled={busy || !(tempCorrective[t.id] ?? "").trim()}
-                          onClick={() => submitTemp(t.id, tempCorrective[t.id])}
+                          onClick={() => { setPressed(`tempfix-${t.id}`); submitTemp(t.id, tempCorrective[t.id]); }}
                           className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                         >
-                          Save
+                          <BusyLabel busy={busy && pressed === `tempfix-${t.id}`} text="Saving…">Save</BusyLabel>
                         </button>
                       </div>
                     </div>
@@ -303,7 +306,7 @@ export default function FoodSafetyTasks() {
             />
             <div className="mt-2 flex justify-end gap-2">
               <button onClick={() => setShowProblemForm(false)} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-neutral-500">Cancel</button>
-              <button disabled={busy} onClick={submitProblem} className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Save</button>
+              <button disabled={busy} onClick={() => { setPressed("problem"); submitProblem(); }} className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"><BusyLabel busy={busy && pressed === "problem"} text="Saving…">Save</BusyLabel></button>
             </div>
           </div>
         )}
@@ -331,10 +334,10 @@ export default function FoodSafetyTasks() {
             <p className="mt-1 text-sm text-neutral-500">Confirms today's checks were done and safe methods followed.</p>
             <button
               disabled={busy}
-              onClick={submitSignoff}
+              onClick={() => { setPressed("signoff"); submitSignoff(); }}
               className="mt-3 w-full rounded-xl bg-neutral-900 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
-              Sign off today
+              <BusyLabel busy={busy && pressed === "signoff"} text="Signing off…">Sign off today</BusyLabel>
             </button>
           </>
         ) : (

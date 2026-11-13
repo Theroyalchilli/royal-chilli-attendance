@@ -1,5 +1,6 @@
 "use client";
 
+import { InlineLoading } from "@/components/StatusPage";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { kindOf, splitNotification } from "@/lib/notification-kinds";
@@ -106,7 +107,7 @@ export default function NotificationHistoryPage() {
 
       <div className="mt-4">
         {loading ? (
-          <p className="py-10 text-center text-sm text-neutral-400">Loading…</p>
+          <InlineLoading />
         ) : items.length === 0 ? (
           <p className="py-10 text-center text-sm text-neutral-400">{q ? "Nothing matches that search." : "No notifications in this period."}</p>
         ) : (

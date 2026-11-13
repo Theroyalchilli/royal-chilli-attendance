@@ -1,5 +1,6 @@
 "use client";
 
+import BusyLabel from "@/components/BusyLabel";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { clockTime, dayLabel } from "@/lib/format";
@@ -212,7 +213,7 @@ function CorrectionModal({ recent, onClose, onDone }: { recent: Recent[]; onClos
         <div className="mt-5 flex gap-3">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
           <button onClick={submit} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">
-            {busy ? "Submitting…" : "Submit"}
+            <BusyLabel busy={!!busy} text="Submitting…">{"Submit"}</BusyLabel>
           </button>
         </div>
       </div>
@@ -347,7 +348,7 @@ function LeaveModal({ onClose, onDone }: { onClose: () => void; onDone: () => vo
         <div className="mt-5 flex gap-3">
           <button onClick={onClose} className="flex-1 rounded-xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">Cancel</button>
           <button onClick={submit} disabled={busy} className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-semibold text-brand-on hover:bg-brand-dark disabled:opacity-50">
-            {busy ? "Submitting…" : "Submit"}
+            <BusyLabel busy={!!busy} text="Submitting…">{"Submit"}</BusyLabel>
           </button>
         </div>
       </div>
